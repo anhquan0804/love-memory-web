@@ -1,0 +1,871 @@
+/* =============================================
+   RESET & BASE
+   ============================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --color-bg:           #f9f7f4;
+  --color-surface:      #ffffff;
+  --color-surface-alt:  #f2efe9;
+  --color-primary:      #c0a98a;
+  --color-primary-dark: #8a7260;
+  --color-text:         #2c2521;
+  --color-text-muted:   #8a7f76;
+  --color-border:       #ddd8d0;
+  --color-error:        #c0392b;
+  --color-success:      #2e7d4f;
+  --font-serif:         'Georgia', serif;
+  --font-ui:            system-ui, -apple-system, sans-serif;
+  --radius:             10px;
+  --shadow:             0 2px 12px rgba(0,0,0,0.07);
+  --transition:         0.25s ease;
+  --drawer-width:       260px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* =============================================
+   PAGE SYSTEM
+   ============================================= */
+.page {
+  display: none;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.page.active { display: flex; flex-direction: column; }
+
+/* =============================================
+   HAMBURGER (fixed top-right)
+   ============================================= */
+.hamburger {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 500;
+  width: 40px;
+  height: 40px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: var(--shadow);
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: var(--color-text);
+  border-radius: 2px;
+  transition: var(--transition);
+}
+
+/* =============================================
+   NAV OVERLAY + DRAWER
+   ============================================= */
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(0,0,0,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+.nav-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 700;
+  width: var(--drawer-width);
+  background: var(--color-surface);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 24px;
+  border-left: 1px solid var(--color-border);
+}
+
+.nav-drawer.open { transform: translateX(0); }
+
+.nav-drawer__title {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 32px;
+  letter-spacing: 0.05em;
+}
+
+.nav-drawer__title span { color: var(--color-primary); }
+
+.nav-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+
+.nav-link {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+
+.nav-link.active { font-weight: 600; }
+
+/* =============================================
+   HERO (homepage only)
+   ============================================= */
+.hero {
+  text-align: center;
+  padding: 80px 24px 56px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.couple-names {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 8vw, 4.5rem);
+  color: var(--color-text);
+  font-weight: normal;
+  letter-spacing: 0.06em;
+}
+
+.heart-icon { color: var(--color-primary); }
+
+.hero-subtitle {
+  margin-top: 10px;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* =============================================
+   PAGE HEADER (sub-pages)
+   ============================================= */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 64px 24px 28px;
+  border-bottom: 1px solid var(--color-border);
+  max-width: 980px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: normal;
+  color: var(--color-text);
+}
+
+/* =============================================
+   SECTIONS
+   ============================================= */
+.section {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  width: 100%;
+}
+
+.gallery-section { border-top: 1px solid var(--color-border); }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: normal;
+  color: var(--color-text);
+  letter-spacing: 0.03em;
+}
+
+/* =============================================
+   ICON BUTTONS
+   ============================================= */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 50px;
+  padding: 6px 14px 6px 10px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-family: inherit;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.btn-icon svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.btn-icon:hover {
+  border-color: var(--color-primary-dark);
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.btn-icon--text { padding: 8px 16px 8px 12px; font-size: 0.88rem; }
+
+/* =============================================
+   MEMORY SCROLL SECTION (homepage)
+   One photo per "slide", scroll-reveal
+   ============================================= */
+.memory-preview-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 72px;
+  padding: 8px 0 16px;
+}
+
+.memory-preview-item {
+  width: 100%;
+  max-width: 560px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-surface);
+  box-shadow: 0 6px 28px rgba(0,0,0,0.09);
+  opacity: 0;
+  transition:
+    opacity   1s   cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1s   cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+}
+
+/* Alternating entrance directions */
+.memory-preview-item.from-left  { transform: translateX(-60px) translateY(20px) scale(0.96); }
+.memory-preview-item.from-right { transform: translateX(60px)  translateY(20px) scale(0.96); }
+
+.memory-preview-item.is-visible {
+  opacity: 1;
+  transform: translateX(0) translateY(0) scale(1);
+}
+
+.memory-preview-item.is-visible:hover {
+  transform: translateY(-6px) scale(1);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.14);
+}
+
+/* Image: scale(1.1) gives room for parallax movement without gaps */
+.memory-preview-item img {
+  width: 100%;
+  max-height: 62vh;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.1);
+  will-change: transform;
+}
+
+.memory-preview-item--featured img { max-height: 70vh; }
+
+/* Entry wrapper: card + date as separate element below — Apple style */
+.memory-scroll-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 560px;
+}
+
+.memory-entry__date {
+  font-family: var(--font-serif);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  color: var(--color-text-muted);
+  text-align: center;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.8s ease 0.65s, transform 0.8s ease 0.65s;
+}
+
+.memory-scroll-entry.is-visible .memory-entry__date {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =============================================
+   GALLERY GRID (home gallery — masonry columns)
+   ============================================= */
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.gallery-header .section-title { margin-bottom: 0; }
+
+.mode-switcher { display: flex; gap: 6px; }
+
+.mode-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 50px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.mode-btn.active,
+.mode-btn:hover {
+  background: var(--color-text);
+  color: #fff;
+  border-color: var(--color-text);
+}
+
+.gallery-grid {
+  columns: 3 200px;
+  column-gap: 12px;
+}
+
+.gallery-item {
+  position: relative;
+  display: block;
+  break-inside: avoid;
+  margin-bottom: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-surface-alt);
+  box-shadow: var(--shadow);
+}
+
+.gallery-item img {
+  width: 100%;
+  display: block;
+  transition: transform var(--transition), filter var(--transition);
+}
+
+.gallery-item:hover img { transform: scale(1.03); filter: brightness(0.95); }
+
+/* =============================================
+   MEMORY PAGE GRID (15-20 photos, masonry)
+   ============================================= */
+.memory-page-grid {
+  columns: 3 180px;
+  column-gap: 10px;
+}
+
+.memory-page-grid .gallery-item { margin-bottom: 10px; }
+
+/* =============================================
+   UPLOAD PAGE GALLERY (square grid)
+   ============================================= */
+.upload-page-gallery {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  columns: unset;
+}
+
+.upload-page-item {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  background: var(--color-surface-alt);
+  box-shadow: var(--shadow);
+}
+
+.upload-page-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition);
+}
+
+.upload-page-item:hover img { transform: scale(1.05); }
+
+.upload-page-item__date {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  font-size: 0.68rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0,0,0,0.45));
+  display: none;
+}
+
+.upload-page-item:hover .upload-page-item__date { display: block; }
+
+/* =============================================
+   TIMELINE MODE
+   ============================================= */
+.timeline-header {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  font-weight: normal;
+  margin: 28px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+  break-inside: avoid;
+  column-span: all;
+}
+
+/* When inside gallery-grid (columns mode), timeline needs block layout */
+.gallery-grid .timeline-header,
+.gallery-grid .timeline-grid {
+  column-span: all;
+}
+
+.timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.timeline-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  background: var(--color-surface-alt);
+}
+
+.timeline-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition);
+}
+
+.timeline-item:hover img { transform: scale(1.05); }
+
+.timeline-item__date {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  font-size: 0.68rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0,0,0,0.45));
+  display: none;
+}
+
+.timeline-item:hover .timeline-item__date { display: block; }
+
+/* =============================================
+   UPLOAD SECTION
+   ============================================= */
+.upload-section { border-bottom: 1px solid var(--color-border); }
+
+.upload-zone {
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius);
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--color-surface);
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--color-primary);
+  background: var(--color-surface-alt);
+}
+
+.upload-zone__icon { font-size: 1.8rem; margin-bottom: 8px; color: var(--color-text-muted); }
+
+.upload-zone__text { font-size: 0.92rem; color: var(--color-text); }
+
+.upload-zone__button {
+  background: none;
+  border: none;
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-family: inherit;
+  padding: 0;
+}
+
+.upload-zone__button:hover { color: var(--color-primary); }
+
+.upload-zone__hint { margin-top: 6px; font-size: 0.76rem; color: var(--color-text-muted); }
+
+.upload-preview { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+.preview-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.btn-upload {
+  display: block;
+  margin: 18px auto 0;
+  padding: 10px 36px;
+  background: var(--color-text);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.btn-upload:hover:not(:disabled) { background: var(--color-primary-dark); transform: translateY(-1px); }
+.btn-upload:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.upload-status {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.86rem;
+  min-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.upload-status.success { color: var(--color-success); }
+.upload-status.error   { color: var(--color-error); }
+
+/* =============================================
+   LIGHTBOX
+   ============================================= */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  background: rgba(255,255,255,0.96);
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox.active { display: flex; }
+
+.lightbox__image {
+  max-width: 88vw;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color var(--transition);
+  z-index: 1;
+}
+
+.lightbox__close:hover { color: var(--color-text); }
+
+/* Prev / Next navigation arrows */
+.lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.4rem;
+  color: var(--color-text);
+  box-shadow: var(--shadow);
+  transition: background var(--transition), transform var(--transition);
+  z-index: 1;
+  line-height: 1;
+}
+
+.lightbox__nav:hover      { background: var(--color-surface-alt); }
+.lightbox__nav--prev      { left: 20px; }
+.lightbox__nav--next      { right: 20px; }
+
+/* Download button */
+.lightbox__download {
+  position: absolute;
+  bottom: 20px;
+  right: 24px;
+  width: 38px;
+  height: 38px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  box-shadow: var(--shadow);
+  transition: color var(--transition), background var(--transition);
+  text-decoration: none;
+  z-index: 1;
+}
+
+.lightbox__download:hover { background: var(--color-surface-alt); color: var(--color-text); }
+
+@media (max-width: 640px) {
+  .lightbox__nav { width: 36px; height: 36px; font-size: 1.1rem; }
+  .lightbox__nav--prev { left: 10px; }
+  .lightbox__nav--next { right: 10px; }
+  .lightbox__image { max-width: 100vw; max-height: 80vh; border-radius: 0; }
+}
+
+/* =============================================
+   DELETE BUTTON (appears on item hover)
+   ============================================= */
+.item-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition);
+  color: var(--color-error);
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* Show on parent hover (desktop) */
+.gallery-item:hover .item-delete-btn,
+.memory-preview-item:hover .item-delete-btn,
+.timeline-item:hover .item-delete-btn,
+.upload-page-item:hover .item-delete-btn { opacity: 1; }
+
+.item-delete-btn:hover { background: #fff; }
+
+/* =============================================
+   PLACEHOLDER TEXT
+   ============================================= */
+.placeholder-text {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  padding: 40px 0;
+  width: 100%;
+}
+
+/* =============================================
+   FOOTER
+   ============================================= */
+.footer {
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+  padding: 28px 24px;
+  text-align: center;
+  background: var(--color-surface-alt);
+}
+
+.footer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.footer-link {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.footer-link:hover { color: var(--color-text); }
+
+.footer-sep { color: var(--color-border); font-size: 0.8rem; }
+
+.footer-credit {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* =============================================
+   MUSIC BUTTON (fixed bottom-left)
+   ============================================= */
+.music-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 500;
+  width: 40px;
+  height: 40px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  color: var(--color-text-muted);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.music-btn:hover {
+  color: var(--color-primary-dark);
+  border-color: var(--color-primary);
+  background: var(--color-surface-alt);
+}
+
+.music-btn.is-playing {
+  color: var(--color-primary-dark);
+  border-color: var(--color-primary);
+}
+
+@keyframes musicPulse {
+  0%, 100% { transform: scale(1);    opacity: 1;    }
+  50%       { transform: scale(1.2); opacity: 0.75; }
+}
+
+.music-btn.is-playing svg {
+  animation: musicPulse 1.4s ease-in-out infinite;
+}
+
+/* =============================================
+   ANIMATIONS — Wedding invitation style
+   ============================================= */
+
+/* Dreamy fade-in: blur dissolves as it rises — dùng cho mọi thứ */
+@keyframes weddingReveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Gentle float cho ảnh featured */
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-7px); }
+}
+
+/* Soft heartbeat */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1);    }
+  20%      { transform: scale(1.32); }
+  40%      { transform: scale(1.08); }
+  60%      { transform: scale(1.22); }
+  80%      { transform: scale(1);    }
+}
+
+/* Refresh spin */
+@keyframes spinOnce {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero {
+  animation: weddingReveal 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.heart-icon {
+  display: inline-block;
+  animation: heartbeat 3.2s ease-in-out infinite;
+}
+
+/* ── Gentle float for hero heart ─────────── */
+.memory-preview-item--featured { /* handled via JS IntersectionObserver delay */ }
+
+/* Refresh button icon spin */
+.btn-icon--spinning svg { animation: spinOnce 0.55s ease; }
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+@media (max-width: 640px) {
+  .memory-preview-item img { max-height: 55vw; }
+  .memory-preview-item--featured img { max-height: 65vw; }
+
+  .gallery-grid { columns: 2 130px; }
+  .memory-page-grid { columns: 2 130px; }
+  .timeline-grid { grid-template-columns: repeat(3, 1fr); }
+  .upload-page-gallery { grid-template-columns: repeat(3, 1fr) !important; }
+  .gallery-header { flex-direction: column; align-items: flex-start; }
+  .page-header { padding: 56px 20px 24px; }
+}

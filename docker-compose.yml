@@ -1,0 +1,13 @@
+services:
+  love-memory:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the host's uploads folder so photos persist outside the container.
+      # On Windows: D:\VibeCode\uploads → /app/uploads inside the container.
+      - ./uploads:/app/uploads
+    env_file:
+      # .env on the host is loaded at runtime — never baked into the image.
+      - .env
+    restart: unless-stopped

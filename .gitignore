@@ -1,0 +1,5 @@
+node_modules/
+uploads/
+.env
+client_secret_*.json
+yt-dlp.exe
