@@ -119,13 +119,23 @@ function playPrev() {
 
 // ── Sheet open / close ─────────────────────────────────────
 function openMusicSheet() {
-  musicSheet.classList.add('is-open');
-  musicSheetOverlay.classList.add('is-open');
+  // Set display first, then add class next frame so CSS transition fires
+  musicSheet.style.display        = 'block';
+  musicSheetOverlay.style.display = 'block';
+  requestAnimationFrame(() => {
+    musicSheet.classList.add('is-open');
+    musicSheetOverlay.classList.add('is-open');
+  });
 }
 
 function closeMusicSheet() {
   musicSheet.classList.remove('is-open');
   musicSheetOverlay.classList.remove('is-open');
+  // Hide with display:none after transition completes
+  musicSheet.addEventListener('transitionend', () => {
+    musicSheet.style.display        = 'none';
+    musicSheetOverlay.style.display = 'none';
+  }, { once: true });
 }
 
 // Swipe down to close
