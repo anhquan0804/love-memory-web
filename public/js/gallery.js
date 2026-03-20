@@ -113,6 +113,7 @@ document.addEventListener('click', (e) => {
   if (link) { e.preventDefault(); showPage(link.dataset.page); return; }
 
   if (e.target.closest('[data-action="toggle-theme"]')) {
+    e.preventDefault();
     applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
   }
 });
