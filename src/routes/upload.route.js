@@ -43,7 +43,8 @@ async function processImage(file) {
 
   if (isGif) return { filename: file.filename, filePath: file.path, ext };
 
-  const resizeOptions = { width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true };
+  // Keep max 1600px — 2048px caused OOM on 256MB Fly.io machine
+  const resizeOptions = { width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true };
 
   try {
     const instance = sharp(file.path).rotate();
@@ -93,7 +94,7 @@ router.post('/', (req, res, _next) => {
 
     try {
       // Process files in batches of 2 to limit Sharp memory usage on 256MB RAM
-      const CONCURRENCY = 2;
+      const CONCURRENCY = 1;
       const processed = [];
       for (let i = 0; i < req.files.length; i += CONCURRENCY) {
         const batch = req.files.slice(i, i + CONCURRENCY);
