@@ -1256,14 +1256,8 @@ a { color: inherit; text-decoration: none; }
     cursor: pointer;
     transition: color var(--transition);
     letter-spacing: 0.02em;
-    /* Reset button element styles */
-    background: none;
-    border: none;
-    padding: 0;
-    color: inherit;
-    font-family: inherit;
+    text-decoration: none;
     -webkit-tap-highlight-color: transparent;
-    outline: none;
   }
 
   .bottom-nav__item.active {
