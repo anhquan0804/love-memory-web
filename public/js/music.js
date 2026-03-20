@@ -28,7 +28,7 @@ const sheetTitleEl       = document.getElementById('sheetMusicTitle');
 const sheetStatusEl      = document.getElementById('sheetMusicStatus');
 
 // Bottom nav trigger
-const bottomNavMusic     = document.getElementById('bottomNavMusic');
+const bottomNavMusic     = document.getElementById('navItemSong');
 
 // ── SVG icons ──────────────────────────────────────────────
 const playSmall  = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
@@ -174,7 +174,7 @@ if (!PLAYLIST.length) {
     audio.play().then(() => updateUI()).catch(() => {
       // Browser blocked autoplay — wait for first interaction
       const onFirstInteraction = (e) => {
-        if (e.target.closest('#bottomNavMusic') || e.target.closest('#musicSheet')) return;
+        if (e.target.closest('#navItemSong') || e.target.closest('#musicSheet')) return;
         if (localStorage.getItem('musicEnabled') !== 'false') tryPlay();
         document.removeEventListener('click',      onFirstInteraction, true);
         document.removeEventListener('touchstart', onFirstInteraction, true);

@@ -1218,7 +1218,7 @@ a { color: inherit; text-decoration: none; }
 .music-sheet__btn--main:hover { background: var(--color-primary-dark); color: white; }
 
 /* Bottom nav music item playing indicator */
-.bottom-nav__item#bottomNavMusic.is-playing {
+.bottom-nav__item#navItemSong.is-playing {
   color: var(--color-primary-dark);
 }
 
