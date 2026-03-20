@@ -1088,6 +1088,9 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 640px) {
   .hamburger { display: none; }
 
+  /* Lift music button above bottom nav */
+  .music-btn { bottom: calc(var(--bottom-nav-h) + 12px); }
+
   .bottom-nav {
     display: flex;
     position: fixed;
