@@ -148,7 +148,8 @@ musicSheet.addEventListener('touchend', e => {
 }, { passive: true });
 
 // ── Event listeners ────────────────────────────────────────
-audio.addEventListener('ended', playNext);
+// Auto-advance: 0.7s gap between songs; manual skip is immediate
+audio.addEventListener('ended', () => setTimeout(playNext, 700));
 audio.addEventListener('play',  updateUI);
 audio.addEventListener('pause', updateUI);
 
@@ -174,7 +175,8 @@ fetch('/api/music')
     }
 
     queue = tracks; // already shuffled by server
-    loadTrack(0);
+    currentIndex = Math.floor(Math.random() * queue.length);
+    loadTrack(currentIndex);
     updateUI();
 
     if (localStorage.getItem('musicEnabled') !== 'false') {

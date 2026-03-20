@@ -84,7 +84,7 @@ async function listMusicFiles() {
   const folderId = process.env.GOOGLE_DRIVE_MUSIC_FOLDER_ID;
 
   const { data } = await drive.files.list({
-    q:       `'${folderId}' in parents and mimeType contains 'audio/' and trashed = false`,
+    q:       `'${folderId}' in parents and (mimeType contains 'audio/' or mimeType = 'video/mp4') and trashed = false`,
     fields:  'files(id, name)',
     orderBy: 'name',
     pageSize: 100,
