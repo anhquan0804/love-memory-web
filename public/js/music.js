@@ -149,8 +149,10 @@ sheetToggleBtn.addEventListener('click', togglePlay);
 sheetPrevBtn.addEventListener('click', playPrev);
 sheetNextBtn.addEventListener('click', playNext);
 
-bottomNavMusic.addEventListener('click', openMusicSheet);
-musicSheetOverlay.addEventListener('click', closeMusicSheet);
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-action="open-music"]')) openMusicSheet();
+  if (e.target.closest('#musicSheetOverlay'))         closeMusicSheet();
+});
 
 // ── Init ───────────────────────────────────────────────────
 if (!PLAYLIST.length) {

@@ -110,7 +110,11 @@ navOverlay.addEventListener('click', closeNav);
 
 document.addEventListener('click', (e) => {
   const link = e.target.closest('[data-page]');
-  if (link) { e.preventDefault(); showPage(link.dataset.page); }
+  if (link) { e.preventDefault(); showPage(link.dataset.page); return; }
+
+  if (e.target.closest('[data-action="toggle-theme"]')) {
+    applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
+  }
 });
 
 document.addEventListener('keydown', (e) => {
@@ -780,9 +784,6 @@ themeToggle.addEventListener('click', () => {
   applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
 });
 
-bottomNavTheme.addEventListener('click', () => {
-  applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
-});
 
 // ── Init ───────────────────────────────────────────────────
 (async () => {
