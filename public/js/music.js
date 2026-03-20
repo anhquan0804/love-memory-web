@@ -6,6 +6,10 @@
 // ── Elements ───────────────────────────────────────────────
 const audio              = document.getElementById('bgMusic');
 
+// Hidden audio element used to preload the next track
+const audioPreloader     = new Audio();
+audioPreloader.preload   = 'auto';
+
 // Drawer (desktop)
 const drawerToggleBtn    = document.getElementById('drawerMusicToggle');
 const drawerNextBtn      = document.getElementById('drawerMusicNext');
@@ -78,10 +82,25 @@ function updateUI() {
 }
 
 // ── Track loading ──────────────────────────────────────────
+function preloadNext(index) {
+  if (queue.length <= 1) return;
+  const nextIdx = (index + 1) % queue.length;
+  const nextSrc = `/api/music/${queue[nextIdx].id}`;
+  if (audioPreloader.src !== nextSrc) audioPreloader.src = nextSrc;
+}
+
 function loadTrack(index) {
   if (!queue.length) return;
-  const track = queue[index];
-  audio.src = `/api/music/${track.id}`;
+  const track   = queue[index];
+  const trackSrc = `/api/music/${track.id}`;
+
+  // If next track was preloaded, swap buffers for instant start
+  if (audioPreloader.src === trackSrc) {
+    audio.src         = audioPreloader.src;
+    audioPreloader.src = '';
+  } else {
+    audio.src = trackSrc;
+  }
   updateUI();
 }
 
@@ -149,7 +168,7 @@ musicSheet.addEventListener('touchend', e => {
 
 // ── Event listeners ────────────────────────────────────────
 audio.addEventListener('ended', playNext);
-audio.addEventListener('play',  updateUI);
+audio.addEventListener('play',  () => { updateUI(); preloadNext(currentIndex); });
 audio.addEventListener('pause', updateUI);
 
 if (drawerToggleBtn) drawerToggleBtn.addEventListener('click', togglePlay);
@@ -196,3 +215,29 @@ fetch('/api/music')
     // API unavailable — hide music button silently
     if (bottomNavMusic) bottomNavMusic.style.display = 'none';
   });
+
+// ── Poll for playlist changes (every 60s, matches server cache TTL) ───
+function pollPlaylist() {
+  fetch('/api/music')
+    .then((r) => r.json())
+    .then(({ tracks }) => {
+      if (!tracks || tracks.length === 0) return;
+
+      const currentIds = queue.map((t) => t.id).sort().join(',');
+      const newIds     = tracks.map((t) => t.id).sort().join(',');
+      if (currentIds === newIds) return; // no change
+
+      // Playlist changed — keep current track playing, update the rest
+      const playingId = queue[currentIndex]?.id;
+      queue = tracks;
+
+      const stillExists = queue.findIndex((t) => t.id === playingId);
+      currentIndex = stillExists !== -1 ? stillExists : 0;
+
+      // Show/hide music button based on whether tracks exist
+      if (bottomNavMusic) bottomNavMusic.style.display = queue.length ? '' : 'none';
+    })
+    .catch(() => {}); // silent fail — keep current playlist
+}
+
+setInterval(pollPlaylist, 60 * 1000);
