@@ -2,8 +2,8 @@ const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
 const crypto  = require('crypto');
-const { getAllMeta, getImageMeta, deleteImageMeta } = require('../utils/metadata.store');
-const { deleteFromDrive } = require('../utils/drive.service');
+const { getAllMeta, getImageMeta, deleteImageMeta, saveImageMeta } = require('../utils/metadata.store');
+const { deleteFromDrive, listNewImageFiles, makePublic } = require('../utils/drive.service');
 
 const router = express.Router();
 
@@ -55,6 +55,48 @@ router.get('/', (req, res) => {
   }
 
   res.json({ images });
+});
+
+// POST /api/gallery/sync
+// Scans the Drive photo folder for images not yet in metadata.json,
+// makes them public, and registers them. No image data is downloaded — RAM-safe.
+router.post('/sync', async (req, res, next) => {
+  try {
+    const metadata     = getAllMeta();
+    const knownFileIds = new Set(
+      Object.values(metadata)
+        .map((m) => m.driveFileId)
+        .filter(Boolean)
+    );
+
+    const newFiles = await listNewImageFiles(knownFileIds);
+
+    if (newFiles.length === 0) {
+      return res.json({ message: 'Không có ảnh mới.', added: 0 });
+    }
+
+    const added = [];
+    for (const file of newFiles) {
+      // Ensure public access (files uploaded directly to Drive may not have it)
+      try { await makePublic(file.id); } catch { /* already public or shared — continue */ }
+
+      const filename = file.name;
+      const date     = file.createdTime || new Date().toISOString();
+
+      saveImageMeta(filename, {
+        date,
+        originalName: filename,
+        driveFileId:  file.id,
+        driveUrl:     `/api/image/${file.id}`,
+      });
+
+      added.push(filename);
+    }
+
+    res.json({ message: `Đã sync ${added.length} ảnh mới từ Drive.`, added: added.length, files: added });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // DELETE /api/gallery/:filename

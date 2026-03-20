@@ -99,4 +99,35 @@ async function listMusicFiles() {
   return tracks;
 }
 
-module.exports = { uploadToDrive, deleteFromDrive, listMusicFiles };
+/**
+ * List all image files in the photo Drive folder (GOOGLE_DRIVE_FOLDER_ID).
+ * Filters out files already tracked in metadata (by driveFileId).
+ * @param {Set<string>} knownFileIds - set of driveFileIds already in metadata
+ * @returns {Promise<Array<{ id, name, createdTime }>>}
+ */
+async function listNewImageFiles(knownFileIds) {
+  const drive    = google.drive({ version: 'v3', auth: getAuth() });
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+  const { data } = await drive.files.list({
+    q:        `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+    fields:   'files(id, name, createdTime)',
+    orderBy:  'createdTime desc',
+    pageSize: 1000,
+  });
+
+  return (data.files || []).filter((f) => !knownFileIds.has(f.id));
+}
+
+/**
+ * Make an existing Drive file publicly readable (reader, anyone).
+ */
+async function makePublic(fileId) {
+  const drive = google.drive({ version: 'v3', auth: getAuth() });
+  await drive.permissions.create({
+    fileId,
+    requestBody: { role: 'reader', type: 'anyone' },
+  });
+}
+
+module.exports = { uploadToDrive, deleteFromDrive, listMusicFiles, listNewImageFiles, makePublic };
