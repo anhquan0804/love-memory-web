@@ -67,7 +67,7 @@ async function deleteFromDrive(fileId) {
 
 // Simple in-memory cache for music list (TTL: 5 minutes)
 let musicCache = { tracks: null, fetchedAt: 0 };
-const MUSIC_CACHE_TTL = 5 * 60 * 1000;
+const MUSIC_CACHE_TTL = 60 * 1000; // 1 minute
 
 /**
  * List all audio files in the music Drive folder.
