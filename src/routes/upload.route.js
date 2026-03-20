@@ -90,42 +90,57 @@ router.post('/', (req, res, _next) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'Không có file nào được tải lên.' });
 
-    const uploaded = await Promise.all(
-      req.files.map(async (file) => {
-        const date      = await extractImageDate(file.path);
-        const processed = await processImage(file);
+    // Process files in batches of 2 to limit Sharp memory usage on 256MB RAM
+    const CONCURRENCY = 2;
+    const uploaded = [];
+    for (let i = 0; i < req.files.length; i += CONCURRENCY) {
+      const batch = req.files.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(async (file) => {
+          const date      = await extractImageDate(file.path);
+          const processed = await processImage(file);
 
-        // Upload to Google Drive
-        let driveFileId = null;
-        let driveUrl    = null;
-        try {
-          const result = await uploadToDrive(processed.filePath, processed.filename, processed.ext);
-          driveFileId  = result.fileId;
-          driveUrl     = result.driveUrl;
+          // Upload to Google Drive
+          let driveFileId  = null;
+          let driveUrl     = null;
+          let driveSuccess = true;
+          try {
+            const result = await uploadToDrive(processed.filePath, processed.filename, processed.ext);
+            driveFileId  = result.fileId;
+            driveUrl     = result.driveUrl;
 
-          // Delete local file after successful Drive upload
-          if (fs.existsSync(processed.filePath)) fs.unlinkSync(processed.filePath);
-        } catch (driveErr) {
-          // Drive upload failed — keep local file as fallback
-          console.error('[Drive] Upload failed for', processed.filename, ':', driveErr.message);
-        }
+            // Delete local file after successful Drive upload
+            if (fs.existsSync(processed.filePath)) fs.unlinkSync(processed.filePath);
+          } catch (driveErr) {
+            // Drive upload failed — keep local file as fallback
+            driveSuccess = false;
+            console.error('[Drive] Upload failed for', processed.filename, ':', driveErr.message);
+          }
 
-        saveImageMeta(processed.filename, {
-          date,
-          originalName: file.originalname,
-          ...(driveFileId && { driveFileId, driveUrl }),
-        });
+          saveImageMeta(processed.filename, {
+            date,
+            originalName: file.originalname,
+            ...(driveFileId && { driveFileId, driveUrl }),
+          });
 
-        return {
-          filename: processed.filename,
-          url:      driveUrl || `/uploads/${processed.filename}`,
-          date,
-          size:     file.size,
-        };
-      })
-    );
+          return {
+            filename:     processed.filename,
+            url:          driveUrl || `/uploads/${processed.filename}`,
+            date,
+            size:         file.size,
+            driveSuccess,
+          };
+        })
+      );
+      uploaded.push(...batchResults);
+    }
 
-    res.status(201).json({ message: 'Upload thành công.', files: uploaded });
+    const driveFailures = uploaded.filter((f) => !f.driveSuccess).length;
+    const message = driveFailures > 0
+      ? `Upload thành công ${uploaded.length} ảnh, nhưng ${driveFailures} ảnh không lưu được lên Drive (giữ local).`
+      : `Upload thành công ${uploaded.length} ảnh.`;
+
+    res.status(201).json({ message, files: uploaded });
   });
 });
 

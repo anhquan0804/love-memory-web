@@ -2,6 +2,9 @@
  * metadata.store.js
  * Lightweight JSON-file store for per-image metadata (date, original name).
  * Stored at uploads/metadata.json as: { "filename": { date, originalName } }
+ *
+ * In-memory cache: reads file once, invalidates on every write.
+ * Avoids disk I/O on every GET /api/gallery request.
  */
 
 const fs = require('fs');
@@ -10,17 +13,23 @@ const path = require('path');
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 const STORE_PATH = path.resolve(uploadDir, 'metadata.json');
 
+// In-memory cache — null means cache is cold (needs a read)
+let cache = null;
+
 function readStore() {
+  if (cache !== null) return cache;
   try {
     const raw = fs.readFileSync(STORE_PATH, 'utf8');
-    return JSON.parse(raw);
+    cache = JSON.parse(raw);
   } catch {
-    return {};
+    cache = {};
   }
+  return cache;
 }
 
 function writeStore(data) {
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf8');
+  cache = data; // update cache in place — no need to re-read
 }
 
 /**
@@ -40,8 +49,7 @@ function saveImageMeta(filename, meta) {
  * @returns {{ date: string, originalName: string } | null}
  */
 function getImageMeta(filename) {
-  const store = readStore();
-  return store[filename] || null;
+  return readStore()[filename] || null;
 }
 
 /**

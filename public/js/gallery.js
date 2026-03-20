@@ -17,7 +17,21 @@ let homeGalleryMode = 'full'; // 'full' | 'timeline'
 // Lightbox state
 let lightboxImages = [];
 let lightboxIndex  = 0;
+
+// Lightbox zoom & pan state
+let zoomScale      = 1;
+let zoomPanX       = 0;
+let zoomPanY       = 0;
+let isPinching     = false;
+let pinchStartDist = 0;
+let pinchStartScale= 1;
+let isDragging     = false;
+let dragStartX     = 0;
+let dragStartY     = 0;
 let touchStartX    = 0;
+let lastTapTime    = 0;
+let lastTapX       = 0;
+let lastTapY       = 0;
 
 // ── DOM refs ───────────────────────────────────────────────
 const hamburger         = document.getElementById('hamburger');
@@ -41,21 +55,31 @@ const uploadPageGalleryEmpty = document.getElementById('uploadPageGalleryEmpty')
 const lightbox         = document.getElementById('lightbox');
 const lightboxImage    = document.getElementById('lightboxImage');
 const lightboxClose    = document.getElementById('lightboxClose');
+const lightboxCounter  = document.getElementById('lightboxCounter');
 const lightboxPrev     = document.getElementById('lightboxPrev');
 const lightboxNext     = document.getElementById('lightboxNext');
 const lightboxDownload = document.getElementById('lightboxDownload');
 
 // ── Page navigation ────────────────────────────────────────
 function showPage(pageId) {
-  document.querySelectorAll('.page').forEach((el) => el.classList.remove('active'));
   const target = document.getElementById(`page-${pageId}`);
-  if (target) {
-    target.classList.add('active');
-    window.scrollTo(0, 0);
-  }
+  if (!target) return;
 
+  // Swap active page with enter animation
+  document.querySelectorAll('.page').forEach((el) => el.classList.remove('active', 'page--entering'));
+  target.classList.add('active', 'page--entering');
+  target.addEventListener('animationend', () => target.classList.remove('page--entering'), { once: true });
+
+  window.scrollTo(0, 0);
+
+  // Sync nav links (desktop drawer)
   document.querySelectorAll('.nav-link').forEach((link) => {
     link.classList.toggle('active', link.dataset.page === pageId);
+  });
+
+  // Sync bottom nav (mobile)
+  document.querySelectorAll('.bottom-nav__item').forEach((item) => {
+    item.classList.toggle('active', item.dataset.page === pageId);
   });
 
   currentPage = pageId;
@@ -96,46 +120,130 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── Lightbox ───────────────────────────────────────────────
+function updateLightboxCounter() {
+  lightboxCounter.textContent = `${lightboxIndex + 1} / ${lightboxImages.length}`;
+}
+
 function openLightboxAt(url) {
   const idx = allImages.findIndex((img) => img.url === url);
   lightboxImages = allImages;
   lightboxIndex  = idx !== -1 ? idx : 0;
-  showLightboxSlide();
-  lightbox.classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
 
-function showLightboxSlide() {
   const img = lightboxImages[lightboxIndex];
   if (!img) return;
 
-  lightboxImage.src        = img.url;
-  lightboxDownload.href    = img.url;
+  resetZoom();
+  updateLightboxCounter();
+  lightboxImage.src = img.url;
+  lightboxDownload.href = img.url;
   lightboxDownload.setAttribute('download', img.originalName || img.filename);
-
-  // Show/hide nav arrows based on position
   lightboxPrev.style.visibility = lightboxIndex > 0 ? 'visible' : 'hidden';
   lightboxNext.style.visibility = lightboxIndex < lightboxImages.length - 1 ? 'visible' : 'hidden';
+
+  // Entrance animation: scale + fade in
+  lightboxImage.classList.remove('lightbox__image--entering');
+  void lightboxImage.offsetWidth; // force reflow to restart animation
+  lightboxImage.classList.add('lightbox__image--entering');
+  lightboxImage.addEventListener('animationend', () => {
+    lightboxImage.classList.remove('lightbox__image--entering');
+  }, { once: true });
+
+  lightbox.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  preloadAdjacentImages();
+}
+
+function showLightboxSlide(direction = 'none') {
+  const img = lightboxImages[lightboxIndex];
+  if (!img) return;
+
+  resetZoom();
+  updateLightboxCounter();
+  lightboxPrev.style.visibility = lightboxIndex > 0 ? 'visible' : 'hidden';
+  lightboxNext.style.visibility = lightboxIndex < lightboxImages.length - 1 ? 'visible' : 'hidden';
+  lightboxDownload.href = img.url;
+  lightboxDownload.setAttribute('download', img.originalName || img.filename);
+
+  // Remove any ongoing animation classes
+  lightboxImage.classList.remove(
+    'lightbox__image--entering',
+    'lightbox__image--slide-next',
+    'lightbox__image--slide-prev'
+  );
+
+  // Quick fade out, then swap src and slide in
+  lightboxImage.style.opacity = '0';
+  lightboxImage.addEventListener('transitionend', () => {
+    lightboxImage.src = img.url;
+    lightboxImage.style.opacity = ''; // clear inline — animation takes over
+
+    if (direction === 'next') {
+      lightboxImage.classList.add('lightbox__image--slide-next');
+    } else if (direction === 'prev') {
+      lightboxImage.classList.add('lightbox__image--slide-prev');
+    } else {
+      lightboxImage.style.opacity = '1';
+    }
+
+    lightboxImage.addEventListener('animationend', () => {
+      lightboxImage.classList.remove('lightbox__image--slide-next', 'lightbox__image--slide-prev');
+    }, { once: true });
+
+    preloadAdjacentImages();
+  }, { once: true });
 }
 
 function lightboxGoNext() {
   if (lightboxIndex < lightboxImages.length - 1) {
     lightboxIndex++;
-    showLightboxSlide();
+    showLightboxSlide('next');
   }
 }
 
 function lightboxGoPrev() {
   if (lightboxIndex > 0) {
     lightboxIndex--;
-    showLightboxSlide();
+    showLightboxSlide('prev');
   }
+}
+
+// Silently preload the images adjacent to the current one into browser cache
+function preloadAdjacentImages() {
+  [-1, 1].forEach((offset) => {
+    const idx = lightboxIndex + offset;
+    if (idx >= 0 && idx < lightboxImages.length) {
+      const pre = new Image();
+      pre.src = lightboxImages[idx].url;
+    }
+  });
 }
 
 function closeLightbox() {
   lightbox.classList.remove('active');
-  lightboxImage.src = '';
   document.body.style.overflow = '';
+  resetZoom();
+  setTimeout(() => { if (!lightbox.classList.contains('active')) lightboxImage.src = ''; }, 250);
+}
+
+// ── Zoom helpers ───────────────────────────────────────────
+function getPinchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function applyZoom() {
+  // translate is in pre-scale space, so divide pan by scale to get screen-pixel movement
+  lightboxImage.style.transform = `scale(${zoomScale}) translate(${zoomPanX / zoomScale}px, ${zoomPanY / zoomScale}px)`;
+  lightboxImage.classList.toggle('lightbox__image--zoomed', zoomScale > 1);
+}
+
+function resetZoom() {
+  zoomScale = 1;
+  zoomPanX  = 0;
+  zoomPanY  = 0;
+  lightboxImage.style.transform = '';
+  lightboxImage.classList.remove('lightbox__image--zoomed', 'lightbox__image--dragging');
 }
 
 lightboxClose.addEventListener('click', closeLightbox);
@@ -147,17 +255,122 @@ lightbox.addEventListener('click', (e) => {
   if (e.target === lightbox) closeLightbox();
 });
 
-// Touch swipe for lightbox
+// ── Lightbox: touch (swipe + pinch zoom + pan) ─────────────
 lightbox.addEventListener('touchstart', (e) => {
-  touchStartX = e.touches[0].clientX;
+  if (e.touches.length === 2) {
+    isPinching      = true;
+    pinchStartDist  = getPinchDist(e.touches);
+    pinchStartScale = zoomScale;
+  } else {
+    isPinching  = false;
+    touchStartX = e.touches[0].clientX;
+    dragStartX  = e.touches[0].clientX;
+    dragStartY  = e.touches[0].clientY;
+  }
 }, { passive: true });
 
+lightbox.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dist = getPinchDist(e.touches);
+    zoomScale = Math.min(4, Math.max(1, pinchStartScale * (dist / pinchStartDist)));
+    if (zoomScale === 1) { zoomPanX = 0; zoomPanY = 0; }
+    applyZoom();
+  } else if (e.touches.length === 1 && zoomScale > 1) {
+    // Pan when zoomed in
+    e.preventDefault();
+    zoomPanX  += e.touches[0].clientX - dragStartX;
+    zoomPanY  += e.touches[0].clientY - dragStartY;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    applyZoom();
+  }
+}, { passive: false });
+
 lightbox.addEventListener('touchend', (e) => {
-  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (isPinching) { isPinching = false; return; }
+
+  const touch = e.changedTouches[0];
+  const now   = Date.now();
+  const dt    = now - lastTapTime;
+  const isDoubleTap = dt < 280 && Math.abs(touch.clientX - lastTapX) < 30 && Math.abs(touch.clientY - lastTapY) < 30;
+
+  if (isDoubleTap) {
+    // Double-tap: toggle zoom to 2.5x at tap position
+    if (zoomScale > 1) {
+      resetZoom();
+    } else {
+      zoomScale = 2.5;
+      const rect = lightboxImage.getBoundingClientRect();
+      const cx   = touch.clientX - (rect.left + rect.width  / 2);
+      const cy   = touch.clientY - (rect.top  + rect.height / 2);
+      zoomPanX = cx * (1 - zoomScale);
+      zoomPanY = cy * (1 - zoomScale);
+      applyZoom();
+    }
+    lastTapTime = 0;
+    return;
+  }
+
+  lastTapTime = now;
+  lastTapX    = touch.clientX;
+  lastTapY    = touch.clientY;
+
+  if (zoomScale > 1) return; // don't swipe when zoomed in
+  const diff = touchStartX - touch.clientX;
   if (Math.abs(diff) > 50) {
     diff > 0 ? lightboxGoNext() : lightboxGoPrev();
   }
 }, { passive: true });
+
+// ── Lightbox: scroll wheel zoom (desktop) ─────────────────
+lightbox.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 0.2 : -0.2;
+  zoomScale = Math.min(4, Math.max(1, zoomScale + delta));
+  if (zoomScale === 1) { zoomPanX = 0; zoomPanY = 0; }
+  applyZoom();
+}, { passive: false });
+
+// ── Lightbox: mouse drag to pan when zoomed (desktop) ─────
+lightboxImage.addEventListener('mousedown', (e) => {
+  if (zoomScale <= 1) return;
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  lightboxImage.classList.add('lightbox__image--dragging');
+  e.preventDefault();
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  zoomPanX  += e.clientX - dragStartX;
+  zoomPanY  += e.clientY - dragStartY;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  applyZoom();
+});
+
+window.addEventListener('mouseup', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  lightboxImage.classList.remove('lightbox__image--dragging');
+});
+
+// Double-click: toggle zoom to 2.5x at cursor position (desktop)
+lightboxImage.addEventListener('dblclick', (e) => {
+  if (zoomScale > 1) {
+    resetZoom();
+  } else {
+    zoomScale = 2.5;
+    const rect = lightboxImage.getBoundingClientRect();
+    const cx   = e.clientX - (rect.left + rect.width  / 2);
+    const cy   = e.clientY - (rect.top  + rect.height / 2);
+    zoomPanX = cx * (1 - zoomScale);
+    zoomPanY = cy * (1 - zoomScale);
+    applyZoom();
+  }
+});
 
 // ── Delete ─────────────────────────────────────────────────
 async function deleteImage(filename) {
@@ -177,6 +390,9 @@ function makeImg(image) {
   el.src     = image.url;
   el.alt     = image.originalName || 'Ảnh kỷ niệm';
   el.loading = 'lazy';
+  el.classList.add('lazy-img');
+  el.addEventListener('load',  () => el.classList.add('img--loaded'), { once: true });
+  el.addEventListener('error', () => el.classList.add('img--loaded'), { once: true });
   return el;
 }
 
@@ -210,10 +426,31 @@ function attachInteractivity(item, image) {
  */
 function makeItem(image, extraClass = '') {
   const item = document.createElement('div');
-  item.className = `gallery-item${extraClass ? ' ' + extraClass : ''}`;
-  item.appendChild(makeImg(image));
+  item.className = `gallery-item skeleton${extraClass ? ' ' + extraClass : ''}`;
+  const img = makeImg(image);
+  img.addEventListener('load',  () => item.classList.remove('skeleton'), { once: true });
+  img.addEventListener('error', () => item.classList.remove('skeleton'), { once: true });
+  item.appendChild(img);
+
+  // Date overlay — visible on hover (desktop)
+  if (image.date) {
+    const overlay = document.createElement('div');
+    overlay.className   = 'item-date-overlay';
+    overlay.textContent = formatDate(image.date);
+    item.appendChild(overlay);
+  }
+
   attachInteractivity(item, image);
+  galleryEntranceObserver.observe(item);
   return item;
+}
+
+// ── Hero background ────────────────────────────────────────
+function updateHeroBackground() {
+  if (allImages.length === 0) return;
+  const img  = allImages[Math.floor(Math.random() * allImages.length)];
+  const hero = document.querySelector('.hero');
+  if (hero) hero.style.setProperty('--hero-bg', `url("${img.url}")`);
 }
 
 // ── Date helpers ───────────────────────────────────────────
@@ -258,6 +495,16 @@ function formatDateWedding(iso) {
     return `${String(d.getDate()).padStart(2, '0')} · Tháng ${d.getMonth() + 1} · ${d.getFullYear()}`;
   } catch { return ''; }
 }
+
+// IntersectionObserver for gallery item staggered entrance
+const galleryEntranceObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('item--visible');
+      galleryEntranceObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.05 });
 
 // IntersectionObserver for scroll-reveal
 const scrollRevealObserver = new IntersectionObserver((entries) => {
@@ -351,8 +598,10 @@ function renderMemoryPage() {
   if (allImages.length === 0) { memoryPageEmpty.style.display = 'block'; return; }
   memoryPageEmpty.style.display = 'none';
 
-  pickRandom(allImages, MEMORY_PAGE_COUNT).forEach((img) => {
-    memoryPageGrid.appendChild(makeItem(img));
+  pickRandom(allImages, MEMORY_PAGE_COUNT).forEach((img, i) => {
+    const item = makeItem(img);
+    item.style.setProperty('--i', Math.min(i, 16));
+    memoryPageGrid.appendChild(item);
   });
 }
 
@@ -366,10 +615,14 @@ function renderUploadPageGallery() {
   if (allImages.length === 0) { uploadPageGalleryEmpty.style.display = 'block'; return; }
   uploadPageGalleryEmpty.style.display = 'none';
 
-  allImages.forEach((img) => {
+  allImages.forEach((img, i) => {
     const item = document.createElement('div');
-    item.className = 'upload-page-item';
-    item.appendChild(makeImg(img));
+    item.className = 'upload-page-item skeleton';
+    item.style.setProperty('--i', Math.min(i, 16));
+    const imgEl = makeImg(img);
+    imgEl.addEventListener('load',  () => item.classList.remove('skeleton'), { once: true });
+    imgEl.addEventListener('error', () => item.classList.remove('skeleton'), { once: true });
+    item.appendChild(imgEl);
 
     if (img.date) {
       const cap = document.createElement('span');
@@ -379,19 +632,25 @@ function renderUploadPageGallery() {
     }
 
     attachInteractivity(item, img);
+    galleryEntranceObserver.observe(item);
     uploadPageGallery.appendChild(item);
   });
 }
 
 // ── Shared: Full masonry grid ──────────────────────────────
 function renderFullGrid(images, container) {
-  images.forEach((img) => container.appendChild(makeItem(img)));
+  images.forEach((img, i) => {
+    const item = makeItem(img);
+    item.style.setProperty('--i', Math.min(i, 16));
+    container.appendChild(item);
+  });
 }
 
 // ── Shared: Timeline grid ──────────────────────────────────
 function renderTimelineGrid(images, container) {
   const groups = [];
   const map    = new Map();
+  let   globalIdx = 0;
 
   images.forEach((img) => {
     const key = groupKey(img.date);
@@ -412,10 +671,14 @@ function renderTimelineGrid(images, container) {
     const subGrid = document.createElement('div');
     subGrid.className = 'timeline-grid';
 
-    items.forEach((img) => {
+    items.forEach((img, i) => {
       const item = document.createElement('div');
-      item.className = 'timeline-item';
-      item.appendChild(makeImg(img));
+      item.className = 'timeline-item skeleton';
+      item.style.setProperty('--i', Math.min(globalIdx++, 16));
+      const imgEl = makeImg(img);
+      imgEl.addEventListener('load',  () => item.classList.remove('skeleton'), { once: true });
+      imgEl.addEventListener('error', () => item.classList.remove('skeleton'), { once: true });
+      item.appendChild(imgEl);
 
       const cap = document.createElement('span');
       cap.className   = 'timeline-item__date';
@@ -423,6 +686,7 @@ function renderTimelineGrid(images, container) {
       item.appendChild(cap);
 
       attachInteractivity(item, img);
+      galleryEntranceObserver.observe(item);
       subGrid.appendChild(item);
     });
 
@@ -485,9 +749,32 @@ window.addEventListener('scroll', () => {
   parallaxRaf = requestAnimationFrame(updateMemoryParallax);
 }, { passive: true });
 
+// ── Dark mode toggle ───────────────────────────────────────
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon   = document.getElementById('themeIcon');
+const themeLabel  = document.getElementById('themeLabel');
+
+const moonSvg = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+const sunSvg  = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+
+function applyTheme(isDark) {
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  themeIcon.innerHTML  = isDark ? sunSvg : moonSvg;
+  themeLabel.textContent = isDark ? 'Giao diện sáng' : 'Giao diện tối';
+}
+
+// Init toggle state from current theme
+applyTheme(document.documentElement.getAttribute('data-theme') === 'dark');
+
+themeToggle.addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
+});
+
 // ── Init ───────────────────────────────────────────────────
 (async () => {
   await Promise.all([loadConfig(), fetchImages()]);
+  updateHeroBackground();
   renderHomeMemory();
   renderHomeGallery();
 })();

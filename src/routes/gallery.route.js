@@ -1,6 +1,7 @@
 const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
+const crypto  = require('crypto');
 const { getAllMeta, getImageMeta, deleteImageMeta } = require('../utils/metadata.store');
 const { deleteFromDrive } = require('../utils/drive.service');
 
@@ -11,6 +12,7 @@ const SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic',
 // GET /api/gallery
 // Returns all images sorted by date (newest first).
 // Prefers Drive URL for cloud-stored images; falls back to local /uploads for old images.
+// Supports ETag — returns 304 Not Modified when data has not changed.
 router.get('/', (req, res) => {
   const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
   const metadata  = getAllMeta();
@@ -38,6 +40,19 @@ router.get('/', (req, res) => {
     const dateB = b.date ? new Date(b.date).getTime() : 0;
     return dateB - dateA;
   });
+
+  // ETag based on image count + filenames — browser gets 304 when nothing changed
+  const etag = crypto
+    .createHash('md5')
+    .update(images.map((i) => i.filename).join(','))
+    .digest('hex');
+
+  res.setHeader('ETag', `"${etag}"`);
+  res.setHeader('Cache-Control', 'private, no-cache');
+
+  if (req.headers['if-none-match'] === `"${etag}"`) {
+    return res.status(304).end();
+  }
 
   res.json({ images });
 });
