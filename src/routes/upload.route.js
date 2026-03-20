@@ -2,7 +2,7 @@ const express = require('express');
 const multer  = require('multer');
 const path    = require('path');
 const fs      = require('fs');
-const sharp   = require('sharp');
+// sharp is lazy-loaded inside processImage to avoid loading the native binary at startup
 const upload  = require('../config/multer.config');
 const { saveImageMeta }              = require('../utils/metadata.store');
 const { uploadToDrive }              = require('../utils/drive.service');
@@ -47,6 +47,7 @@ async function processImage(file) {
   const resizeOptions = { width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true };
 
   try {
+    const sharp    = require('sharp'); // lazy-load: native binary only enters RAM on first upload
     const instance = sharp(file.path).rotate();
 
     if (isHeic) {
