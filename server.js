@@ -24,7 +24,14 @@ app.use(express.json());
 // Allow cross-origin requests (useful when accessing via Cloudflare Tunnel)
 app.use(cors());
 
-// Serve static frontend files from /public — cache 7 days in browser
+// Serve index.html with no-cache so users always get the latest version
+app.get('/', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Serve other static files (CSS, JS, images) — cache 7 days in browser
+// CSS/JS use query string versioning (e.g. ?v=1.1.8) for cache busting
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d' }));
 
 // Serve uploaded images at /uploads
