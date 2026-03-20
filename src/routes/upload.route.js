@@ -81,57 +81,63 @@ async function processImage(file) {
 
 // POST /api/upload
 router.post('/', (req, res, _next) => {
-  upload.array('images', 10)(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE')  return res.status(400).json({ error: 'File quá nặng. Tối đa 25MB mỗi ảnh.' });
-      if (err.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ error: 'Quá nhiều file. Tối đa 10 ảnh mỗi lần.' });
-      return res.status(400).json({ error: err.message });
+  upload.array('images', 10)(req, res, async (multerErr) => {
+    // Multer-level errors
+    if (multerErr instanceof multer.MulterError) {
+      if (multerErr.code === 'LIMIT_FILE_SIZE')  return res.status(400).json({ error: 'File quá nặng. Tối đa 25MB mỗi ảnh.' });
+      if (multerErr.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ error: 'Quá nhiều file. Tối đa 10 ảnh mỗi lần.' });
+      return res.status(400).json({ error: multerErr.message });
     }
-    if (err) return res.status(400).json({ error: err.message });
+    if (multerErr) return res.status(400).json({ error: multerErr.message });
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'Không có file nào được tải lên.' });
 
-    // Process files in batches of 2 to limit Sharp memory usage on 256MB RAM
-    const CONCURRENCY = 2;
-    const processed = [];
-    for (let i = 0; i < req.files.length; i += CONCURRENCY) {
-      const batch = req.files.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(
-        batch.map(async (file) => {
-          const date  = await extractImageDate(file.path);
-          const proc  = await processImage(file);
-          saveImageMeta(proc.filename, { date, originalName: file.originalname });
-          return { file, proc, date };
-        })
-      );
-      processed.push(...results);
-    }
+    try {
+      // Process files in batches of 2 to limit Sharp memory usage on 256MB RAM
+      const CONCURRENCY = 2;
+      const processed = [];
+      for (let i = 0; i < req.files.length; i += CONCURRENCY) {
+        const batch = req.files.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          batch.map(async (file) => {
+            const date  = await extractImageDate(file.path);
+            const proc  = await processImage(file);
+            saveImageMeta(proc.filename, { date, originalName: file.originalname });
+            return { file, proc, date };
+          })
+        );
+        processed.push(...results);
+      }
 
-    // Respond immediately — Drive upload happens in background
-    const responseFiles = processed.map(({ proc, date, file }) => ({
-      filename: proc.filename,
-      url:      `/uploads/${proc.filename}`,
-      date,
-      size:     file.size,
-    }));
+      // Respond immediately — Drive upload happens in background
+      res.status(201).json({
+        message: `Upload thành công ${processed.length} ảnh.`,
+        files: processed.map(({ proc, date, file }) => ({
+          filename: proc.filename,
+          url:      `/uploads/${proc.filename}`,
+          date,
+          size:     file.size,
+        })),
+      });
 
-    res.status(201).json({
-      message: `Upload thành công ${responseFiles.length} ảnh.`,
-      files:   responseFiles,
-    });
-
-    // Background: upload to Google Drive after response is sent
-    for (const { proc } of processed) {
-      uploadToDrive(proc.filePath, proc.filename, proc.ext)
-        .then(({ fileId, driveUrl }) => {
-          const meta = require('../utils/metadata.store').getAllMeta();
-          if (meta[proc.filename]) {
-            saveImageMeta(proc.filename, { ...meta[proc.filename], driveFileId: fileId, driveUrl });
-          }
-          if (fs.existsSync(proc.filePath)) fs.unlinkSync(proc.filePath);
-        })
-        .catch((err) => {
-          console.error('[Drive] Background upload failed for', proc.filename, ':', err.message);
-        });
+      // Background: upload to Google Drive after response is sent
+      for (const { proc } of processed) {
+        uploadToDrive(proc.filePath, proc.filename, proc.ext)
+          .then(({ fileId, driveUrl }) => {
+            const meta = require('../utils/metadata.store').getAllMeta();
+            if (meta[proc.filename]) {
+              saveImageMeta(proc.filename, { ...meta[proc.filename], driveFileId: fileId, driveUrl });
+            }
+            if (fs.existsSync(proc.filePath)) fs.unlinkSync(proc.filePath);
+          })
+          .catch((driveErr) => {
+            console.error('[Drive] Background upload failed for', proc.filename, ':', driveErr.message);
+          });
+      }
+    } catch (err) {
+      console.error('[Upload] Processing error:', err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Lỗi xử lý ảnh. Vui lòng thử lại.' });
+      }
     }
   });
 });
