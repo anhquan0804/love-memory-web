@@ -17,17 +17,8 @@
 </head>
 <body>
 
-  <!-- ── Music toggle button (fixed bottom-left) ── -->
-  <button class="music-btn" id="musicToggleBtn" aria-label="Bật nhạc">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9 18V5l12-2v13"/>
-      <circle cx="6" cy="18" r="3"/>
-      <circle cx="18" cy="16" r="3"/>
-    </svg>
-  </button>
-
-  <!-- ── Background audio ───────────────────────── -->
-  <audio id="bgMusic" loop preload="auto"></audio>
+  <!-- ── Background audio (no loop — playlist handles advance) ── -->
+  <audio id="bgMusic" preload="auto"></audio>
 
   <!-- ── Hamburger button (fixed) ───────────────── -->
   <button class="hamburger" id="hamburger" aria-label="Mở menu">
@@ -45,11 +36,26 @@
     </ul>
     <button class="theme-toggle" id="themeToggle" aria-label="Chuyển giao diện sáng/tối">
       <span class="theme-toggle__icon" id="themeIcon">
-        <!-- moon icon — shown in light mode to switch to dark -->
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </span>
       <span class="theme-toggle__label" id="themeLabel">Giao diện tối</span>
     </button>
+
+    <!-- Music controls in drawer -->
+    <div class="drawer-music">
+      <div class="drawer-music__track">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span class="drawer-music__title" id="drawerMusicTitle">Chưa phát nhạc</span>
+      </div>
+      <div class="drawer-music__controls">
+        <button class="drawer-music__btn" id="drawerMusicToggle" aria-label="Phát">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <button class="drawer-music__btn" id="drawerMusicNext" aria-label="Bài tiếp theo">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+      </div>
+    </div>
   </nav>
 
   <!-- ── Bottom navigation (mobile only) ──────── -->
@@ -65,6 +71,10 @@
     <a class="bottom-nav__item" data-page="upload">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       <span>Thêm ảnh</span>
+    </a>
+    <a class="bottom-nav__item" id="bottomNavMusic">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span>Nhạc</span>
     </a>
     <a class="bottom-nav__item" id="bottomNavTheme">
       <span id="bottomNavThemeIcon">
@@ -226,6 +236,32 @@
     <a class="lightbox__download" id="lightboxDownload" href="#" download title="Tải ảnh về">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     </a>
+  </div>
+
+  <!-- ── Music sheet (mobile bottom sheet) ── -->
+  <div class="music-sheet-overlay" id="musicSheetOverlay"></div>
+  <div class="music-sheet" id="musicSheet" role="dialog" aria-modal="true" aria-label="Nhạc nền">
+    <div class="music-sheet__handle"></div>
+    <div class="music-sheet__track">
+      <div class="music-sheet__note">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div class="music-sheet__info">
+        <p class="music-sheet__title" id="sheetMusicTitle">Chưa phát nhạc</p>
+        <p class="music-sheet__status" id="sheetMusicStatus">Tạm dừng</p>
+      </div>
+    </div>
+    <div class="music-sheet__controls">
+      <button class="music-sheet__btn" id="sheetMusicPrev" aria-label="Bài trước">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+      </button>
+      <button class="music-sheet__btn music-sheet__btn--main" id="sheetMusicToggle" aria-label="Phát">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button class="music-sheet__btn" id="sheetMusicNext" aria-label="Bài tiếp theo">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+      </button>
+    </div>
   </div>
 
   <script src="/js/gallery.js"></script>
