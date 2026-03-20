@@ -10,6 +10,7 @@ const galleryRoute = require('./src/routes/gallery.route');
 const uploadRoute  = require('./src/routes/upload.route');
 const configRoute  = require('./src/routes/config.route');
 const imageRoute   = require('./src/routes/image.route');
+const musicRoute   = require('./src/routes/music.route');
 const errorHandler = require('./src/middleware/errorHandler');
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/config',  configRoute);
 app.use('/api/gallery', galleryRoute);
 app.use('/api/upload',  uploadLimiter, uploadRoute);
 app.use('/api/image',   imageRoute);
+app.use('/api/music',   musicRoute);
 
 // Global error handler — must be registered after all routes
 app.use(errorHandler);

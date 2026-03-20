@@ -1,6 +1,6 @@
 /**
  * drive.service.js
- * Google Drive helper: upload image, delete image.
+ * Google Drive helper: upload image, delete image, list music files.
  * Uses OAuth2 with refresh token — no user interaction required after setup.
  */
 
@@ -65,4 +65,38 @@ async function deleteFromDrive(fileId) {
   await drive.files.delete({ fileId });
 }
 
-module.exports = { uploadToDrive, deleteFromDrive };
+// Simple in-memory cache for music list (TTL: 5 minutes)
+let musicCache = { tracks: null, fetchedAt: 0 };
+const MUSIC_CACHE_TTL = 5 * 60 * 1000;
+
+/**
+ * List all audio files in the music Drive folder.
+ * Results are cached 5 minutes to avoid hitting the API on every page load.
+ * @returns {Promise<Array<{ id: string, title: string }>>}
+ */
+async function listMusicFiles() {
+  const now = Date.now();
+  if (musicCache.tracks && now - musicCache.fetchedAt < MUSIC_CACHE_TTL) {
+    return musicCache.tracks;
+  }
+
+  const drive    = google.drive({ version: 'v3', auth: getAuth() });
+  const folderId = process.env.GOOGLE_DRIVE_MUSIC_FOLDER_ID;
+
+  const { data } = await drive.files.list({
+    q:       `'${folderId}' in parents and mimeType contains 'audio/' and trashed = false`,
+    fields:  'files(id, name)',
+    orderBy: 'name',
+    pageSize: 100,
+  });
+
+  const tracks = (data.files || []).map((f) => ({
+    id:    f.id,
+    title: f.name.replace(/\.[^.]+$/, ''), // strip extension for display
+  }));
+
+  musicCache = { tracks, fetchedAt: now };
+  return tracks;
+}
+
+module.exports = { uploadToDrive, deleteFromDrive, listMusicFiles };

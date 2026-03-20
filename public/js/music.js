@@ -1,14 +1,7 @@
 /**
  * music.js — Playlist player
- *
- * PLAYLIST: add songs here. Each entry:
- *   { src: '/music/filename.mp3', title: 'Tên bài', startTime: 2.5 }
- *   startTime (optional): skip N seconds of silence at the beginning
+ * Fetches track list from /api/music (Google Drive music folder).
  */
-const PLAYLIST = [
-  { src: '/music/bg.webm', title: 'Bài hát 1', startTime: 0 },
-  // { src: '/music/song2.mp3', title: 'Tên bài 2', startTime: 2.5 },
-];
 
 // ── Elements ───────────────────────────────────────────────
 const audio              = document.getElementById('bgMusic');
@@ -41,17 +34,23 @@ const playLarge  = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" 
 const pauseLarge = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
 
 // ── Playlist state ─────────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+let queue        = [];
+let currentIndex = 0;
+
+// ── Volume ─────────────────────────────────────────────────
+function setVolume(val) {
+  const v = Math.max(0, Math.min(100, val));
+  audio.volume = v / 100;
+  if (drawerVolumeSlider) drawerVolumeSlider.value = v;
+  if (sheetVolumeSlider)  sheetVolumeSlider.value  = v;
+  localStorage.setItem('musicVolume', v);
 }
 
-const queue = shuffle(PLAYLIST);
-let currentIndex = 0;
+const savedVolume = parseInt(localStorage.getItem('musicVolume') ?? '40', 10);
+setVolume(savedVolume);
+
+if (drawerVolumeSlider) drawerVolumeSlider.addEventListener('input', () => setVolume(drawerVolumeSlider.value));
+if (sheetVolumeSlider)  sheetVolumeSlider.addEventListener('input',  () => setVolume(sheetVolumeSlider.value));
 
 // ── UI sync ────────────────────────────────────────────────
 function updateUI() {
@@ -82,8 +81,7 @@ function updateUI() {
 function loadTrack(index) {
   if (!queue.length) return;
   const track = queue[index];
-  audio.src = track.src;
-  audio.currentTime = track.startTime || 0;
+  audio.src = `/api/music/${track.id}`;
   updateUI();
 }
 
@@ -113,7 +111,7 @@ function playNext() {
 function playPrev() {
   // Restart current track if past 3s, else go to previous
   if (audio.currentTime > 3) {
-    audio.currentTime = queue[currentIndex].startTime || 0;
+    audio.currentTime = 0;
   } else {
     currentIndex = (currentIndex - 1 + queue.length) % queue.length;
     loadTrack(currentIndex);
@@ -123,7 +121,6 @@ function playPrev() {
 
 // ── Sheet open / close ─────────────────────────────────────
 function openMusicSheet() {
-  // Set display first, then add class next frame so CSS transition fires
   musicSheet.style.display        = 'block';
   musicSheetOverlay.style.display = 'block';
   requestAnimationFrame(() => {
@@ -135,7 +132,6 @@ function openMusicSheet() {
 function closeMusicSheet() {
   musicSheet.classList.remove('is-open');
   musicSheetOverlay.classList.remove('is-open');
-  // Hide with display:none after transition completes
   musicSheet.addEventListener('transitionend', () => {
     musicSheet.style.display        = 'none';
     musicSheetOverlay.style.display = 'none';
@@ -168,38 +164,34 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#musicSheetOverlay'))         closeMusicSheet();
 });
 
-// ── Volume ─────────────────────────────────────────────────
-function setVolume(val) {
-  const v = Math.max(0, Math.min(100, val));
-  audio.volume = v / 100;
-  if (drawerVolumeSlider) drawerVolumeSlider.value = v;
-  if (sheetVolumeSlider)  sheetVolumeSlider.value  = v;
-  localStorage.setItem('musicVolume', v);
-}
+// ── Init — fetch playlist from API ─────────────────────────
+fetch('/api/music')
+  .then((r) => r.json())
+  .then(({ tracks }) => {
+    if (!tracks || tracks.length === 0) {
+      if (bottomNavMusic) bottomNavMusic.style.display = 'none';
+      return;
+    }
 
-const savedVolume = parseInt(localStorage.getItem('musicVolume') ?? '40', 10);
-setVolume(savedVolume);
+    queue = tracks; // already shuffled by server
+    loadTrack(0);
+    updateUI();
 
-if (drawerVolumeSlider) drawerVolumeSlider.addEventListener('input', () => setVolume(drawerVolumeSlider.value));
-if (sheetVolumeSlider)  sheetVolumeSlider.addEventListener('input',  () => setVolume(sheetVolumeSlider.value));
-
-// ── Init ───────────────────────────────────────────────────
-if (!PLAYLIST.length) {
-  bottomNavMusic.style.display = 'none';
-} else {
-  loadTrack(0);
-
-  if (localStorage.getItem('musicEnabled') !== 'false') {
-    audio.play().then(() => updateUI()).catch(() => {
-      // Browser blocked autoplay — wait for first interaction
-      const onFirstInteraction = (e) => {
-        if (e.target.closest('#navItemSong') || e.target.closest('#musicSheet')) return;
-        if (localStorage.getItem('musicEnabled') !== 'false') tryPlay();
-        document.removeEventListener('click',      onFirstInteraction, true);
-        document.removeEventListener('touchstart', onFirstInteraction, true);
-      };
-      document.addEventListener('click',      onFirstInteraction, true);
-      document.addEventListener('touchstart', onFirstInteraction, true);
-    });
-  }
-}
+    if (localStorage.getItem('musicEnabled') !== 'false') {
+      audio.play().then(() => updateUI()).catch(() => {
+        // Browser blocked autoplay — wait for first interaction
+        const onFirstInteraction = (e) => {
+          if (e.target.closest('#navItemSong') || e.target.closest('#musicSheet')) return;
+          if (localStorage.getItem('musicEnabled') !== 'false') tryPlay();
+          document.removeEventListener('click',      onFirstInteraction, true);
+          document.removeEventListener('touchstart', onFirstInteraction, true);
+        };
+        document.addEventListener('click',      onFirstInteraction, true);
+        document.addEventListener('touchstart', onFirstInteraction, true);
+      });
+    }
+  })
+  .catch(() => {
+    // API unavailable — hide music button silently
+    if (bottomNavMusic) bottomNavMusic.style.display = 'none';
+  });
