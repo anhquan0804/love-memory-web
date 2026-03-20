@@ -103,12 +103,14 @@ a { color: inherit; text-decoration: none; }
   background: rgba(0,0,0,0.3);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--transition);
+  visibility: hidden;
+  transition: opacity var(--transition), visibility var(--transition);
 }
 
 .nav-overlay.visible {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
 }
 
 .nav-drawer {
