@@ -203,22 +203,29 @@ fetch('/api/music')
     queue        = tracks;
     currentIndex = Math.floor(Math.random() * queue.length);
 
-    // Load first track into active, preload next into standby
+    // Load first track — do NOT preload standby yet (avoid consuming audio quota before user gesture)
     active.src = `/api/music/${queue[currentIndex].id}`;
     updateUI();
-    preloadNext(currentIndex);
 
     if (localStorage.getItem('musicEnabled') !== 'false') {
-      active.play().then(() => { updateUI(); localStorage.setItem('musicEnabled', 'true'); }).catch(() => {
-        const onFirstInteraction = (e) => {
-          if (e.target.closest('#navItemSong') || e.target.closest('#musicSheet')) return;
-          if (localStorage.getItem('musicEnabled') !== 'false') tryPlay();
-          document.removeEventListener('click',      onFirstInteraction, true);
-          document.removeEventListener('touchstart', onFirstInteraction, true);
-        };
-        document.addEventListener('click',      onFirstInteraction, true);
-        document.addEventListener('touchstart', onFirstInteraction, true);
-      });
+      active.play()
+        .then(() => {
+          updateUI();
+          localStorage.setItem('musicEnabled', 'true');
+          preloadNext(currentIndex);
+        })
+        .catch(() => {
+          const onFirstInteraction = (e) => {
+            if (e.target.closest('#navItemSong') || e.target.closest('#musicSheet')) return;
+            if (localStorage.getItem('musicEnabled') !== 'false') {
+              tryPlay().then(() => preloadNext(currentIndex));
+            }
+            document.removeEventListener('click',      onFirstInteraction, true);
+            document.removeEventListener('touchstart', onFirstInteraction, true);
+          };
+          document.addEventListener('click',      onFirstInteraction, true);
+          document.addEventListener('touchstart', onFirstInteraction, true);
+        });
     }
   })
   .catch(() => {
