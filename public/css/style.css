@@ -1217,6 +1217,68 @@ a { color: inherit; text-decoration: none; }
 
 .music-sheet__btn--main:hover { background: var(--color-primary-dark); color: white; }
 
+/* Volume slider — shared base */
+.music-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--color-primary-dark);
+}
+.music-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary-dark);
+  cursor: pointer;
+}
+
+/* Drawer volume row */
+.drawer-music__volume {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--color-text-muted);
+}
+.drawer-music__slider {
+  flex: 1;
+}
+
+/* Sheet volume row */
+.music-sheet__volume {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  color: var(--color-text-muted);
+}
+.music-sheet__slider {
+  flex: 1;
+}
+
+/* Upload progress bar */
+.upload-progress {
+  margin-top: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  overflow: hidden;
+  display: none;
+}
+.upload-progress.visible { display: block; }
+.upload-progress__bar {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primary-dark);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
 /* Bottom nav music item playing indicator */
 .bottom-nav__item#navItemSong.is-playing {
   color: var(--color-primary-dark);

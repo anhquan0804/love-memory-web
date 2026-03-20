@@ -92,55 +92,47 @@ router.post('/', (req, res, _next) => {
 
     // Process files in batches of 2 to limit Sharp memory usage on 256MB RAM
     const CONCURRENCY = 2;
-    const uploaded = [];
+    const processed = [];
     for (let i = 0; i < req.files.length; i += CONCURRENCY) {
       const batch = req.files.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
+      const results = await Promise.all(
         batch.map(async (file) => {
-          const date      = await extractImageDate(file.path);
-          const processed = await processImage(file);
-
-          // Upload to Google Drive
-          let driveFileId  = null;
-          let driveUrl     = null;
-          let driveSuccess = true;
-          try {
-            const result = await uploadToDrive(processed.filePath, processed.filename, processed.ext);
-            driveFileId  = result.fileId;
-            driveUrl     = result.driveUrl;
-
-            // Delete local file after successful Drive upload
-            if (fs.existsSync(processed.filePath)) fs.unlinkSync(processed.filePath);
-          } catch (driveErr) {
-            // Drive upload failed — keep local file as fallback
-            driveSuccess = false;
-            console.error('[Drive] Upload failed for', processed.filename, ':', driveErr.message);
-          }
-
-          saveImageMeta(processed.filename, {
-            date,
-            originalName: file.originalname,
-            ...(driveFileId && { driveFileId, driveUrl }),
-          });
-
-          return {
-            filename:     processed.filename,
-            url:          driveUrl || `/uploads/${processed.filename}`,
-            date,
-            size:         file.size,
-            driveSuccess,
-          };
+          const date  = await extractImageDate(file.path);
+          const proc  = await processImage(file);
+          saveImageMeta(proc.filename, { date, originalName: file.originalname });
+          return { file, proc, date };
         })
       );
-      uploaded.push(...batchResults);
+      processed.push(...results);
     }
 
-    const driveFailures = uploaded.filter((f) => !f.driveSuccess).length;
-    const message = driveFailures > 0
-      ? `Upload thành công ${uploaded.length} ảnh, nhưng ${driveFailures} ảnh không lưu được lên Drive (giữ local).`
-      : `Upload thành công ${uploaded.length} ảnh.`;
+    // Respond immediately — Drive upload happens in background
+    const responseFiles = processed.map(({ proc, date, file }) => ({
+      filename: proc.filename,
+      url:      `/uploads/${proc.filename}`,
+      date,
+      size:     file.size,
+    }));
 
-    res.status(201).json({ message, files: uploaded });
+    res.status(201).json({
+      message: `Upload thành công ${responseFiles.length} ảnh.`,
+      files:   responseFiles,
+    });
+
+    // Background: upload to Google Drive after response is sent
+    for (const { proc } of processed) {
+      uploadToDrive(proc.filePath, proc.filename, proc.ext)
+        .then(({ fileId, driveUrl }) => {
+          const meta = require('../utils/metadata.store').getAllMeta();
+          if (meta[proc.filename]) {
+            saveImageMeta(proc.filename, { ...meta[proc.filename], driveFileId: fileId, driveUrl });
+          }
+          if (fs.existsSync(proc.filePath)) fs.unlinkSync(proc.filePath);
+        })
+        .catch((err) => {
+          console.error('[Drive] Background upload failed for', proc.filename, ':', err.message);
+        });
+    }
   });
 });
 

@@ -27,6 +27,10 @@ const sheetNextBtn       = document.getElementById('sheetMusicNext');
 const sheetTitleEl       = document.getElementById('sheetMusicTitle');
 const sheetStatusEl      = document.getElementById('sheetMusicStatus');
 
+// Volume sliders
+const drawerVolumeSlider = document.getElementById('drawerVolumeSlider');
+const sheetVolumeSlider  = document.getElementById('sheetVolumeSlider');
+
 // Bottom nav trigger
 const bottomNavMusic     = document.getElementById('navItemSong');
 
@@ -163,6 +167,21 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-action="open-music"]')) { e.preventDefault(); openMusicSheet(); }
   if (e.target.closest('#musicSheetOverlay'))         closeMusicSheet();
 });
+
+// ── Volume ─────────────────────────────────────────────────
+function setVolume(val) {
+  const v = Math.max(0, Math.min(100, val));
+  audio.volume = v / 100;
+  if (drawerVolumeSlider) drawerVolumeSlider.value = v;
+  if (sheetVolumeSlider)  sheetVolumeSlider.value  = v;
+  localStorage.setItem('musicVolume', v);
+}
+
+const savedVolume = parseInt(localStorage.getItem('musicVolume') ?? '40', 10);
+setVolume(savedVolume);
+
+if (drawerVolumeSlider) drawerVolumeSlider.addEventListener('input', () => setVolume(drawerVolumeSlider.value));
+if (sheetVolumeSlider)  sheetVolumeSlider.addEventListener('input',  () => setVolume(sheetVolumeSlider.value));
 
 // ── Init ───────────────────────────────────────────────────
 if (!PLAYLIST.length) {
