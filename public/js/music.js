@@ -148,8 +148,7 @@ musicSheet.addEventListener('touchend', e => {
 }, { passive: true });
 
 // ── Event listeners ────────────────────────────────────────
-// Auto-advance: 0.7s gap between songs; manual skip is immediate
-audio.addEventListener('ended', () => setTimeout(playNext, 700));
+audio.addEventListener('ended', playNext);
 audio.addEventListener('play',  updateUI);
 audio.addEventListener('pause', updateUI);
 
