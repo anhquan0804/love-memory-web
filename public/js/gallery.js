@@ -446,7 +446,7 @@ function makeImg(image) {
   el.loading = 'lazy';
   el.classList.add('lazy-img');
   el.addEventListener('load',  () => { el.classList.add('img--loaded'); }, { once: true });
-  el.addEventListener('error', () => { el.classList.add('img--loaded'); el.alt = '⚠ Không tải được'; }, { once: true });
+  el.addEventListener('error', () => { el.classList.add('img--loaded'); }, { once: true });
   return el;
 }
 
@@ -511,7 +511,7 @@ function makeItem(image, extraClass = '') {
   item.className = `gallery-item skeleton${extraClass ? ' ' + extraClass : ''}`;
   const img = makeImg(image);
   img.addEventListener('load',  () => item.classList.remove('skeleton'), { once: true });
-  img.addEventListener('error', () => item.classList.remove('skeleton'), { once: true });
+  img.addEventListener('error', () => { item.classList.remove('skeleton'); item.style.display = 'none'; }, { once: true });
   item.appendChild(img);
 
   // Date overlay — visible on hover (desktop)
@@ -700,7 +700,9 @@ function renderHomeMemory() {
     const item = document.createElement('div');
     const dirClass = idx % 2 === 0 ? 'from-left' : 'from-right';
     item.className = `memory-preview-item ${dirClass}${idx === 0 ? ' memory-preview-item--featured' : ''}`;
-    item.appendChild(makeImg(img));
+    const memImg = makeImg(img);
+    memImg.addEventListener('error', () => { entry.style.display = 'none'; }, { once: true });
+    item.appendChild(memImg);
     attachInteractivity(item, img);
     entry.appendChild(item);
 
@@ -788,7 +790,7 @@ function renderUploadPageGallery() {
     item.style.setProperty('--i', Math.min(i, 16));
     const imgEl = makeImg(img);
     imgEl.addEventListener('load',  () => item.classList.remove('skeleton'), { once: true });
-    imgEl.addEventListener('error', () => item.classList.remove('skeleton'), { once: true });
+    imgEl.addEventListener('error', () => { item.classList.remove('skeleton'); item.style.display = 'none'; }, { once: true });
     item.appendChild(imgEl);
 
     if (img.date) {
@@ -844,7 +846,7 @@ function renderTimelineGrid(images, container) {
       item.style.setProperty('--i', Math.min(globalIdx++, 16));
       const imgEl = makeImg(img);
       imgEl.addEventListener('load',  () => item.classList.remove('skeleton'), { once: true });
-      imgEl.addEventListener('error', () => item.classList.remove('skeleton'), { once: true });
+      imgEl.addEventListener('error', () => { item.classList.remove('skeleton'); item.style.display = 'none'; }, { once: true });
       item.appendChild(imgEl);
 
       const cap = document.createElement('span');
