@@ -6,8 +6,9 @@ const router = express.Router();
 // Returns public configuration values safe to expose to the frontend
 router.get('/', (_req, res) => {
   res.json({
-    name1: process.env.NAME_1 || 'Bạn',
-    name2: process.env.NAME_2 || 'Người yêu',
+    name1:            process.env.NAME_1             || 'Bạn',
+    name2:            process.env.NAME_2             || 'Người yêu',
+    anniversaryDate:  process.env.ANNIVERSARY_DATE   || '',
   });
 });
 

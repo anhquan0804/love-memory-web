@@ -538,16 +538,30 @@ function updateHeroBackground() {
 
 // ── Hero stats bar ─────────────────────────────────────────
 function updateHeroStats() {
-  if (!heroStats) return;
-  if (allImages.length === 0) { heroStats.textContent = ''; return; }
-  const count = allImages.length;
-  const oldest = allImages.reduce((acc, img) => {
-    if (!img.date) return acc;
-    const d = new Date(img.date);
-    return (!acc || d < acc) ? d : acc;
-  }, null);
-  const sinceText = oldest ? ` · Từ ${fmtFull.format(oldest)}` : '';
-  heroStats.textContent = `${count} ảnh kỷ niệm${sinceText}`;
+  if (!heroStats || !anniversaryDate) { if (heroStats) heroStats.textContent = ''; return; }
+
+  const today = new Date();
+  let years  = today.getFullYear() - anniversaryDate.getFullYear();
+  let months = today.getMonth()    - anniversaryDate.getMonth();
+  let days   = today.getDate()     - anniversaryDate.getDate();
+
+  if (days < 0) {
+    months--;
+    days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+  }
+  if (months < 0) { years--; months += 12; }
+
+  // Format "Từ DD/MM/YYYY"
+  const dd  = String(anniversaryDate.getDate()).padStart(2, '0');
+  const mm  = String(anniversaryDate.getMonth() + 1).padStart(2, '0');
+  const yyyy = anniversaryDate.getFullYear();
+
+  const parts = [];
+  if (years  > 0) parts.push(`${years} năm`);
+  if (months > 0) parts.push(`${months} tháng`);
+  if (days   > 0) parts.push(`${days} ngày`);
+
+  heroStats.textContent = `${parts.join(' · ')} · Từ ${dd}/${mm}/${yyyy}`;
 }
 
 // ── Today in memories ──────────────────────────────────────
@@ -566,12 +580,35 @@ function renderTodayInMemories() {
 
   if (matches.length === 0) { todayMemoriesSection.style.display = 'none'; return; }
 
+  // Group by year, sort descending (latest first)
+  const byYear = new Map();
+  matches.forEach((img) => {
+    const y = new Date(img.date).getFullYear();
+    if (!byYear.has(y)) byYear.set(y, []);
+    byYear.get(y).push(img);
+  });
+  const sortedYears = [...byYear.keys()].sort((a, b) => b - a);
+
   todayMemoriesSection.style.display = '';
   todayMemoriesGrid.innerHTML = '';
-  matches.forEach((img, i) => {
-    const item = makeItem(img);
-    item.style.setProperty('--i', Math.min(i, 16));
-    todayMemoriesGrid.appendChild(item);
+
+  let globalIdx = 0;
+  sortedYears.forEach((year) => {
+    // Year label
+    const yearLabel = document.createElement('div');
+    yearLabel.className   = 'today-memories__year';
+    yearLabel.textContent = `Năm ${year}`;
+    todayMemoriesGrid.appendChild(yearLabel);
+
+    // Sub-grid for this year
+    const subGrid = document.createElement('div');
+    subGrid.className = 'gallery-grid today-memories__subgrid';
+    byYear.get(year).forEach((img) => {
+      const item = makeItem(img);
+      item.style.setProperty('--i', Math.min(globalIdx++, 16));
+      subGrid.appendChild(item);
+    });
+    todayMemoriesGrid.appendChild(subGrid);
   });
 }
 
@@ -801,7 +838,7 @@ function renderTimelineGrid(images, container) {
     const subGrid = document.createElement('div');
     subGrid.className = 'timeline-grid';
 
-    items.forEach((img, i) => {
+    items.forEach((img) => {
       const item = document.createElement('div');
       item.className = 'timeline-item skeleton';
       item.style.setProperty('--i', Math.min(globalIdx++, 16));
@@ -858,6 +895,8 @@ networkErrorRetry.addEventListener('click', refreshGallery);
 window.refreshGallery = refreshGallery;
 
 // ── Config: load names from .env via server ────────────────
+let anniversaryDate = null; // parsed Date from config
+
 async function loadConfig() {
   try {
     const res  = await fetch('/api/config');
@@ -867,6 +906,11 @@ async function loadConfig() {
     document.querySelectorAll('.js-name1').forEach((el) => { el.textContent = name1; });
     document.querySelectorAll('.js-name2').forEach((el) => { el.textContent = name2; });
     document.title = `${name1} & ${name2}`;
+
+    if (data.anniversaryDate) {
+      const [y, m, d] = data.anniversaryDate.split('-').map(Number);
+      anniversaryDate = new Date(y, m - 1, d); // local midnight — no timezone shift
+    }
   } catch (err) {
     console.error('[Config]', err.message);
   }
