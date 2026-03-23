@@ -29,6 +29,8 @@ const sheetStatusEl      = document.getElementById('sheetMusicStatus');
 
 const drawerVolumeSlider = document.getElementById('drawerVolumeSlider');
 const sheetVolumeSlider  = document.getElementById('sheetVolumeSlider');
+const drawerVolumeValue  = document.getElementById('drawerVolumeValue');
+const sheetVolumeValue   = document.getElementById('sheetVolumeValue');
 const bottomNavMusic     = document.getElementById('navItemSong');
 
 // ── SVG icons ──────────────────────────────────────────────
@@ -48,6 +50,8 @@ function setVolume(val) {
   audioB.volume = v / 100;
   if (drawerVolumeSlider) drawerVolumeSlider.value = v;
   if (sheetVolumeSlider)  sheetVolumeSlider.value  = v;
+  if (drawerVolumeValue)  drawerVolumeValue.textContent = `${v}%`;
+  if (sheetVolumeValue)   sheetVolumeValue.textContent  = `${v}%`;
   localStorage.setItem('musicVolume', v);
 }
 
@@ -196,9 +200,11 @@ fetch('/api/music')
   .then((r) => r.json())
   .then(({ tracks }) => {
     if (!tracks || tracks.length === 0) {
-      if (bottomNavMusic) bottomNavMusic.style.display = 'none';
-      return;
+      return; // keep navItemSong hidden (already hidden by default in HTML)
     }
+
+    // Reveal music nav button now that we confirmed tracks exist
+    if (bottomNavMusic) bottomNavMusic.style.display = '';
 
     queue        = tracks;
     currentIndex = Math.floor(Math.random() * queue.length);

@@ -59,6 +59,35 @@ const lightboxCounter  = document.getElementById('lightboxCounter');
 const lightboxPrev     = document.getElementById('lightboxPrev');
 const lightboxNext     = document.getElementById('lightboxNext');
 const lightboxDownload = document.getElementById('lightboxDownload');
+const lightboxError    = document.getElementById('lightboxError');
+
+const confirmOverlay   = document.getElementById('confirmOverlay');
+const confirmMsg       = document.getElementById('confirmMsg');
+const confirmOk        = document.getElementById('confirmOk');
+const confirmCancel    = document.getElementById('confirmCancel');
+const networkError     = document.getElementById('networkError');
+const networkErrorRetry= document.getElementById('networkErrorRetry');
+
+// ── Custom dialog (replaces browser confirm/alert) ─────────
+function showDialog({ message, okLabel = 'Xóa', showCancel = true }) {
+  return new Promise((resolve) => {
+    confirmMsg.textContent  = message;
+    confirmOk.textContent   = okLabel;
+    confirmOk.className     = showCancel ? 'confirm-box__btn confirm-box__btn--delete' : 'confirm-box__btn confirm-box__btn--ok';
+    confirmCancel.style.display = showCancel ? '' : 'none';
+    confirmOverlay.classList.add('active');
+
+    const finish = (result) => {
+      confirmOverlay.classList.remove('active');
+      resolve(result);
+    };
+    confirmOk.addEventListener('click',     () => finish(true),  { once: true });
+    confirmCancel.addEventListener('click', () => finish(false), { once: true });
+    confirmOverlay.addEventListener('click', (e) => {
+      if (e.target === confirmOverlay) finish(false);
+    }, { once: true });
+  });
+}
 
 // ── Page navigation ────────────────────────────────────────
 function showPage(pageId) {
@@ -139,7 +168,10 @@ function openLightboxAt(url) {
 
   resetZoom();
   updateLightboxCounter();
+  lightboxError.style.display = 'none';
   lightboxImage.src = img.url;
+  lightboxImage.addEventListener('error', () => { lightboxError.style.display = 'flex'; }, { once: true });
+  lightboxImage.addEventListener('load',  () => { lightboxError.style.display = 'none'; }, { once: true });
   lightboxDownload.href = img.url;
   lightboxDownload.setAttribute('download', img.originalName || img.filename);
   lightboxPrev.style.visibility = lightboxIndex > 0 ? 'visible' : 'hidden';
@@ -179,7 +211,10 @@ function showLightboxSlide(direction = 'none') {
   // Quick fade out, then swap src and slide in
   lightboxImage.style.opacity = '0';
   lightboxImage.addEventListener('transitionend', () => {
+    lightboxError.style.display = 'none';
     lightboxImage.src = img.url;
+    lightboxImage.addEventListener('error', () => { lightboxError.style.display = 'flex'; }, { once: true });
+    lightboxImage.addEventListener('load',  () => { lightboxError.style.display = 'none'; }, { once: true });
     lightboxImage.style.opacity = ''; // clear inline — animation takes over
 
     if (direction === 'next') {
@@ -379,13 +414,14 @@ lightboxImage.addEventListener('dblclick', (e) => {
 
 // ── Delete ─────────────────────────────────────────────────
 async function deleteImage(filename) {
-  if (!confirm('Xóa ảnh này?')) return;
+  const ok = await showDialog({ message: 'Xóa ảnh này?' });
+  if (!ok) return;
   try {
     const res = await fetch(`/api/gallery/${encodeURIComponent(filename)}`, { method: 'DELETE' });
     if (!res.ok) throw new Error((await res.json()).error || 'Xóa thất bại');
     await refreshGallery();
   } catch (err) {
-    alert('Không thể xóa: ' + err.message);
+    await showDialog({ message: 'Không thể xóa: ' + err.message, okLabel: 'OK', showCancel: false });
   }
 }
 
@@ -396,8 +432,8 @@ function makeImg(image) {
   el.alt     = image.originalName || 'Ảnh kỷ niệm';
   el.loading = 'lazy';
   el.classList.add('lazy-img');
-  el.addEventListener('load',  () => el.classList.add('img--loaded'), { once: true });
-  el.addEventListener('error', () => el.classList.add('img--loaded'), { once: true });
+  el.addEventListener('load',  () => { el.classList.add('img--loaded'); }, { once: true });
+  el.addEventListener('error', () => { el.classList.add('img--loaded'); el.alt = '⚠ Không tải được'; }, { once: true });
   return el;
 }
 
@@ -417,13 +453,17 @@ function attachInteractivity(item, image) {
   item.addEventListener('click', () => openLightboxAt(image.url));
   item.appendChild(makeDeleteBtn(image));
 
-  // Long press on mobile triggers delete
+  // Long press on mobile triggers delete (with visual ring feedback)
   let longPressTimer;
   item.addEventListener('touchstart', () => {
-    longPressTimer = setTimeout(() => deleteImage(image.filename), 700);
+    item.classList.add('is-long-pressing');
+    longPressTimer = setTimeout(() => {
+      item.classList.remove('is-long-pressing');
+      deleteImage(image.filename);
+    }, 700);
   }, { passive: true });
-  item.addEventListener('touchend',  () => clearTimeout(longPressTimer));
-  item.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+  item.addEventListener('touchend',  () => { clearTimeout(longPressTimer); item.classList.remove('is-long-pressing'); });
+  item.addEventListener('touchmove', () => { clearTimeout(longPressTimer); item.classList.remove('is-long-pressing'); }, { passive: true });
 }
 
 /**
@@ -706,18 +746,25 @@ async function fetchImages() {
     if (!res.ok) throw new Error('Gallery fetch failed');
     const data = await res.json();
     allImages = data.images;
+    networkError.classList.remove('active');
+    return true;
   } catch (err) {
     console.error('[Gallery]', err.message);
+    networkError.classList.add('active');
+    return false;
   }
 }
 
 async function refreshGallery() {
-  await fetchImages();
+  const ok = await fetchImages();
+  if (!ok) return;
   renderHomeMemory();
   renderHomeGallery();
   if (currentPage === 'memory') renderMemoryPage();
   if (currentPage === 'upload') renderUploadPageGallery();
 }
+
+networkErrorRetry.addEventListener('click', refreshGallery);
 
 // Expose for upload.js
 window.refreshGallery = refreshGallery;
@@ -788,6 +835,16 @@ themeToggle.addEventListener('click', () => {
 
 // ── Init ───────────────────────────────────────────────────
 (async () => {
+  // Show skeleton placeholders while data loads
+  [homeGalleryGrid, homeMemoryGrid].forEach((grid) => {
+    grid.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+      const el = document.createElement('div');
+      el.className = 'gallery-item skeleton';
+      grid.appendChild(el);
+    }
+  });
+
   await Promise.all([loadConfig(), fetchImages()]);
   updateHeroBackground();
   renderHomeMemory();
