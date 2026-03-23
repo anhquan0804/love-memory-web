@@ -145,6 +145,11 @@ document.addEventListener('click', (e) => {
     e.preventDefault();
     applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
   }
+
+  if (e.target.closest('[data-action="open-settings"]')) {
+    e.preventDefault();
+    window.openSettingsSheet?.();
+  }
 });
 
 document.addEventListener('keydown', (e) => {

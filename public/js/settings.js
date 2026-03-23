@@ -23,10 +23,10 @@ const THEMES = [
     swatch: ['#ffffff', '#18181b', '#71717a'],
   },
   {
-    id:       'dark-luxury',
-    name:     'Dark Luxury',
-    desc:     'Tối, gold accent',
-    swatch:   ['#0d0c09', '#c9a96e', '#f5f0e8'],
+    id:        'dark-luxury',
+    name:      'Dark Luxury',
+    desc:      'Tối, gold accent',
+    swatch:    ['#0d0c09', '#c9a96e', '#f5f0e8'],
     forceDark: true,
   },
   {
@@ -43,112 +43,117 @@ const THEMES = [
   },
 ];
 
-// ── DOM refs ───────────────────────────────────────────────
-const settingsSheet        = document.getElementById('settingsSheet');
-const settingsSheetOverlay = document.getElementById('settingsSheetOverlay');
-const settingsDarkToggle   = document.getElementById('settingsDarkToggle');
-const themeGrid            = document.getElementById('themeGrid');
+// ── Apply UI theme (runs immediately to prevent flash) ─────
+(function initUiTheme() {
+  const saved = localStorage.getItem('uiTheme');
+  if (saved) document.documentElement.setAttribute('data-ui-theme', saved);
+})();
 
-// ── Sheet open / close ─────────────────────────────────────
-function openSettingsSheet() {
-  // Close nav drawer first (desktop)
-  window.closeNav?.();
+// ── DOM-dependent logic (runs after DOM is ready) ──────────
+function initSettings() {
+  const settingsSheet        = document.getElementById('settingsSheet');
+  const settingsSheetOverlay = document.getElementById('settingsSheetOverlay');
+  const settingsDarkToggle   = document.getElementById('settingsDarkToggle');
+  const themeGrid            = document.getElementById('themeGrid');
 
-  settingsSheet.style.display        = 'block';
-  settingsSheetOverlay.style.display = 'block';
-  requestAnimationFrame(() => {
-    settingsSheet.classList.add('is-open');
-    settingsSheetOverlay.classList.add('is-open');
-  });
-  updateDarkToggle();
-}
-
-function closeSettingsSheet() {
-  settingsSheet.classList.remove('is-open');
-  settingsSheetOverlay.classList.remove('is-open');
-  settingsSheet.addEventListener('transitionend', () => {
-    settingsSheet.style.display        = 'none';
-    settingsSheetOverlay.style.display = 'none';
-  }, { once: true });
-}
-
-settingsSheetOverlay.addEventListener('click', closeSettingsSheet);
-
-// Swipe down to close
-let touchStartY = 0;
-settingsSheet.addEventListener('touchstart', (e) => {
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
-settingsSheet.addEventListener('touchend', (e) => {
-  if (e.changedTouches[0].clientY - touchStartY > 60) closeSettingsSheet();
-}, { passive: true });
-
-// ── Apply UI theme ─────────────────────────────────────────
-function applyUiTheme(themeId) {
-  const theme = THEMES.find((t) => t.id === themeId) || THEMES[0];
-  document.documentElement.setAttribute('data-ui-theme', themeId);
-  localStorage.setItem('uiTheme', themeId);
-
-  // Dark Luxury always forces dark mode
-  if (theme.forceDark) {
-    window.applyTheme(true);
+  // Guard: bail out silently if any required element is missing
+  if (!settingsSheet || !settingsSheetOverlay || !settingsDarkToggle || !themeGrid) {
+    console.error('[Settings] Missing DOM elements — sheet will not function');
+    return;
   }
 
-  updateThemeCards();
-  updateDarkToggle();
-}
-
-// ── Theme cards ─────────────────────────────────────────────
-function buildThemeGrid() {
-  themeGrid.innerHTML = '';
-  THEMES.forEach((theme) => {
-    const card = document.createElement('button');
-    card.className     = 'theme-card';
-    card.dataset.theme = theme.id;
-    card.setAttribute('aria-label', theme.name);
-    card.innerHTML = `
-      <div class="theme-card__preview">
-        ${theme.swatch.map((c) => `<span style="background:${c}"></span>`).join('')}
-      </div>
-      <span class="theme-card__name">${theme.name}</span>
-      <span class="theme-card__desc">${theme.desc}</span>
-    `;
-    card.addEventListener('click', () => applyUiTheme(theme.id));
-    themeGrid.appendChild(card);
-  });
-  updateThemeCards();
-}
-
-function updateThemeCards() {
-  const current = document.documentElement.getAttribute('data-ui-theme') || 'default';
-  document.querySelectorAll('.theme-card').forEach((card) => {
-    card.classList.toggle('active', card.dataset.theme === current);
-  });
-}
-
-// ── Dark mode toggle in settings sheet ────────────────────
-function updateDarkToggle() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  settingsDarkToggle.classList.toggle('is-on', isDark);
-}
-
-settingsDarkToggle.addEventListener('click', () => {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  window.applyTheme(!isDark);
-  updateDarkToggle();
-});
-
-// ── Open settings from nav items ───────────────────────────
-document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-action="open-settings"]')) {
-    e.preventDefault();
-    openSettingsSheet();
+  // ── Sheet open / close ───────────────────────────────────
+  function openSettingsSheet() {
+    window.closeNav?.();
+    settingsSheet.style.display        = 'block';
+    settingsSheetOverlay.style.display = 'block';
+    requestAnimationFrame(() => {
+      settingsSheet.classList.add('is-open');
+      settingsSheetOverlay.classList.add('is-open');
+    });
+    updateDarkToggle();
   }
-});
 
-// ── Init ───────────────────────────────────────────────────
-buildThemeGrid();
+  function closeSettingsSheet() {
+    settingsSheet.classList.remove('is-open');
+    settingsSheetOverlay.classList.remove('is-open');
+    settingsSheet.addEventListener('transitionend', () => {
+      settingsSheet.style.display        = 'none';
+      settingsSheetOverlay.style.display = 'none';
+    }, { once: true });
+  }
 
-// Apply saved UI theme (colors only — light/dark already applied in <head>)
-const savedUiTheme = localStorage.getItem('uiTheme') || 'default';
-document.documentElement.setAttribute('data-ui-theme', savedUiTheme);
+  // Expose so gallery.js click handler can call it
+  window.openSettingsSheet = openSettingsSheet;
+
+  settingsSheetOverlay.addEventListener('click', closeSettingsSheet);
+
+  // Swipe down to close
+  let touchStartY = 0;
+  settingsSheet.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  settingsSheet.addEventListener('touchend', (e) => {
+    if (e.changedTouches[0].clientY - touchStartY > 60) closeSettingsSheet();
+  }, { passive: true });
+
+  // ── Apply UI theme ───────────────────────────────────────
+  function applyUiTheme(themeId) {
+    const theme = THEMES.find((t) => t.id === themeId) || THEMES[0];
+    document.documentElement.setAttribute('data-ui-theme', themeId);
+    localStorage.setItem('uiTheme', themeId);
+    if (theme.forceDark) window.applyTheme?.(true);
+    updateThemeCards();
+    updateDarkToggle();
+  }
+
+  // ── Theme cards ──────────────────────────────────────────
+  function buildThemeGrid() {
+    themeGrid.innerHTML = '';
+    THEMES.forEach((theme) => {
+      const card = document.createElement('button');
+      card.className     = 'theme-card';
+      card.dataset.theme = theme.id;
+      card.setAttribute('aria-label', theme.name);
+      card.innerHTML = `
+        <div class="theme-card__preview">
+          ${theme.swatch.map((c) => `<span style="background:${c}"></span>`).join('')}
+        </div>
+        <span class="theme-card__name">${theme.name}</span>
+        <span class="theme-card__desc">${theme.desc}</span>
+      `;
+      card.addEventListener('click', () => applyUiTheme(theme.id));
+      themeGrid.appendChild(card);
+    });
+    updateThemeCards();
+  }
+
+  function updateThemeCards() {
+    const current = document.documentElement.getAttribute('data-ui-theme') || 'default';
+    document.querySelectorAll('.theme-card').forEach((card) => {
+      card.classList.toggle('active', card.dataset.theme === current);
+    });
+  }
+
+  // ── Dark mode toggle ─────────────────────────────────────
+  function updateDarkToggle() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    settingsDarkToggle.classList.toggle('is-on', isDark);
+  }
+
+  settingsDarkToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    window.applyTheme?.(!isDark);
+    updateDarkToggle();
+  });
+
+  // ── Init ─────────────────────────────────────────────────
+  buildThemeGrid();
+}
+
+// Run after DOM is fully parsed (scripts are at end of body, so DOM is ready)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSettings);
+} else {
+  initSettings();
+}
