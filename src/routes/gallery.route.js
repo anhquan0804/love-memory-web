@@ -2,7 +2,7 @@ const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
 const crypto  = require('crypto');
-const { getAllMeta, getImageMeta, deleteImageMeta, saveImageMeta } = require('../utils/metadata.store');
+const { getAllMeta, getImageMeta, deleteImageMeta, saveImageMeta, updateImageMeta } = require('../utils/metadata.store');
 const { deleteFromDrive, listNewImageFiles, makePublic } = require('../utils/drive.service');
 
 const router = express.Router();
@@ -23,6 +23,8 @@ router.get('/', (req, res) => {
     url:          meta.driveUrl || `/uploads/${filename}`,
     date:         meta.date || null,
     originalName: meta.originalName || filename,
+    favorite:     meta.favorite || false,
+    caption:      meta.caption  || '',
   }));
 
   // Also scan local uploads folder for any files not yet in metadata
@@ -97,6 +99,23 @@ router.post('/sync', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// PATCH /api/gallery/:filename/favorite
+router.patch('/:filename/favorite', (req, res) => {
+  const safeName = path.basename(req.params.filename);
+  const { favorite } = req.body;
+  updateImageMeta(safeName, { favorite: !!favorite });
+  res.json({ ok: true });
+});
+
+// PATCH /api/gallery/:filename/caption
+router.patch('/:filename/caption', (req, res) => {
+  const safeName = path.basename(req.params.filename);
+  const { caption } = req.body;
+  if (typeof caption !== 'string') return res.status(400).json({ error: 'Invalid caption.' });
+  updateImageMeta(safeName, { caption: caption.trim().slice(0, 200) });
+  res.json({ ok: true });
 });
 
 // DELETE /api/gallery/:filename

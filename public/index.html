@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>Love Memory</title>
-  <link rel="stylesheet" href="/css/style.css?v=1.3.0" />
+  <link rel="stylesheet" href="/css/style.css?v=1.4.0" />
   <script>
     // Apply saved theme + UI theme before paint to avoid flash
     if (localStorage.getItem('theme') === 'dark') {
@@ -98,7 +98,16 @@
     <header class="hero">
       <h1 class="couple-names"><span class="js-name1"></span> <span class="heart-icon">&#10084;</span> <span class="js-name2"></span></h1>
       <p class="hero-subtitle">Kỷ niệm của chúng mình</p>
+      <p class="hero-stats" id="heroStats"></p>
     </header>
+
+    <!-- Today in memories -->
+    <section class="section today-memories-section" id="todayMemoriesSection" style="display:none">
+      <div class="section-head">
+        <h2 class="section-title">Hôm nay năm ngoái ✦</h2>
+      </div>
+      <div class="gallery-grid today-memories-grid" id="todayMemoriesGrid"></div>
+    </section>
 
     <!-- Memory preview -->
     <section class="section">
@@ -137,8 +146,9 @@
       <div class="gallery-header">
         <h2 class="section-title">Thư viện ảnh</h2>
         <div class="mode-switcher" role="group">
-          <button class="mode-btn active" data-gallery="home" data-mode="full">Đầy đủ</button>
+          <button class="mode-btn active" data-gallery="home" data-mode="full">Tất cả</button>
           <button class="mode-btn" data-gallery="home" data-mode="timeline">Timeline</button>
+          <button class="mode-btn" data-gallery="home" data-mode="favorites">♡ Yêu thích</button>
         </div>
       </div>
       <div class="gallery-grid" id="homeGalleryGrid">
@@ -238,6 +248,7 @@
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
     <button class="lightbox__close" id="lightboxClose" aria-label="Đóng">&#10005;</button>
     <div class="lightbox__counter" id="lightboxCounter"></div>
+    <div class="lightbox__date" id="lightboxDate"></div>
     <button class="lightbox__nav lightbox__nav--prev" id="lightboxPrev" aria-label="Ảnh trước">&#8249;</button>
     <img class="lightbox__image" id="lightboxImage" src="" alt="Ảnh kỷ niệm" />
     <div class="lightbox__error" id="lightboxError">Không thể tải ảnh</div>
@@ -309,9 +320,14 @@
     </div>
   </div>
 
-  <script src="/js/gallery.js?v=1.3.0"></script>
-  <script src="/js/upload.js?v=1.3.0"></script>
-  <script src="/js/music.js?v=1.3.0"></script>
-  <script src="/js/settings.js?v=1.3.0"></script>
+  <!-- Back to top -->
+  <button class="back-to-top" id="backToTop" aria-label="Lên đầu trang">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+
+  <script src="/js/gallery.js?v=1.4.0"></script>
+  <script src="/js/upload.js?v=1.4.0"></script>
+  <script src="/js/music.js?v=1.4.0"></script>
+  <script src="/js/settings.js?v=1.4.0"></script>
 </body>
 </html>

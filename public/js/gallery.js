@@ -56,6 +56,7 @@ const lightbox         = document.getElementById('lightbox');
 const lightboxImage    = document.getElementById('lightboxImage');
 const lightboxClose    = document.getElementById('lightboxClose');
 const lightboxCounter  = document.getElementById('lightboxCounter');
+const lightboxDate     = document.getElementById('lightboxDate');
 const lightboxPrev     = document.getElementById('lightboxPrev');
 const lightboxNext     = document.getElementById('lightboxNext');
 const lightboxDownload = document.getElementById('lightboxDownload');
@@ -67,6 +68,11 @@ const confirmOk        = document.getElementById('confirmOk');
 const confirmCancel    = document.getElementById('confirmCancel');
 const networkError     = document.getElementById('networkError');
 const networkErrorRetry= document.getElementById('networkErrorRetry');
+
+const heroStats            = document.getElementById('heroStats');
+const todayMemoriesSection = document.getElementById('todayMemoriesSection');
+const todayMemoriesGrid    = document.getElementById('todayMemoriesGrid');
+const backToTop            = document.getElementById('backToTop');
 
 // ── Custom dialog (replaces browser confirm/alert) ─────────
 function showDialog({ message, okLabel = 'Xóa', showCancel = true }) {
@@ -173,6 +179,7 @@ function openLightboxAt(url) {
 
   resetZoom();
   updateLightboxCounter();
+  if (lightboxDate) lightboxDate.textContent = img.date ? formatDate(img.date) : '';
   lightboxError.style.display = 'none';
   lightboxImage.src = img.url;
   lightboxImage.addEventListener('error', () => { lightboxError.style.display = 'flex'; }, { once: true });
@@ -201,6 +208,7 @@ function showLightboxSlide(direction = 'none') {
 
   resetZoom();
   updateLightboxCounter();
+  if (lightboxDate) lightboxDate.textContent = img.date ? formatDate(img.date) : '';
   lightboxPrev.style.visibility = lightboxIndex > 0 ? 'visible' : 'hidden';
   lightboxNext.style.visibility = lightboxIndex < lightboxImages.length - 1 ? 'visible' : 'hidden';
   lightboxDownload.href = img.url;
@@ -442,6 +450,30 @@ function makeImg(image) {
   return el;
 }
 
+function makeFavBtn(image) {
+  const btn = document.createElement('button');
+  btn.className = `item-fav-btn${image.favorite ? ' is-favorite' : ''}`;
+  btn.setAttribute('aria-label', image.favorite ? 'Bỏ yêu thích' : 'Yêu thích');
+  const heartPath = `<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>`;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="${image.favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${heartPath}</svg>`;
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const newFav = !image.favorite;
+    image.favorite = newFav;
+    btn.classList.toggle('is-favorite', newFav);
+    btn.querySelector('svg').setAttribute('fill', newFav ? 'currentColor' : 'none');
+    btn.setAttribute('aria-label', newFav ? 'Bỏ yêu thích' : 'Yêu thích');
+    try {
+      await fetch(`/api/gallery/${encodeURIComponent(image.filename)}/favorite`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ favorite: newFav }),
+      });
+    } catch { /* optimistic update — ignore network error */ }
+  });
+  return btn;
+}
+
 function makeDeleteBtn(image) {
   const btn = document.createElement('button');
   btn.className = 'item-delete-btn';
@@ -491,6 +523,7 @@ function makeItem(image, extraClass = '') {
   }
 
   attachInteractivity(item, image);
+  item.appendChild(makeFavBtn(image));
   galleryEntranceObserver.observe(item);
   return item;
 }
@@ -501,6 +534,45 @@ function updateHeroBackground() {
   const img  = allImages[Math.floor(Math.random() * allImages.length)];
   const hero = document.querySelector('.hero');
   if (hero) hero.style.setProperty('--hero-bg', `url("${img.url}")`);
+}
+
+// ── Hero stats bar ─────────────────────────────────────────
+function updateHeroStats() {
+  if (!heroStats) return;
+  if (allImages.length === 0) { heroStats.textContent = ''; return; }
+  const count = allImages.length;
+  const oldest = allImages.reduce((acc, img) => {
+    if (!img.date) return acc;
+    const d = new Date(img.date);
+    return (!acc || d < acc) ? d : acc;
+  }, null);
+  const sinceText = oldest ? ` · Từ ${fmtFull.format(oldest)}` : '';
+  heroStats.textContent = `${count} ảnh kỷ niệm${sinceText}`;
+}
+
+// ── Today in memories ──────────────────────────────────────
+function renderTodayInMemories() {
+  if (!todayMemoriesSection || !todayMemoriesGrid) return;
+  const today = new Date();
+  const todayM = today.getMonth();
+  const todayD = today.getDate();
+  const todayY = today.getFullYear();
+
+  const matches = allImages.filter((img) => {
+    if (!img.date) return false;
+    const d = new Date(img.date);
+    return d.getMonth() === todayM && d.getDate() === todayD && d.getFullYear() !== todayY;
+  });
+
+  if (matches.length === 0) { todayMemoriesSection.style.display = 'none'; return; }
+
+  todayMemoriesSection.style.display = '';
+  todayMemoriesGrid.innerHTML = '';
+  matches.forEach((img, i) => {
+    const item = makeItem(img);
+    item.style.setProperty('--i', Math.min(i, 16));
+    todayMemoriesGrid.appendChild(item);
+  });
 }
 
 // ── Date helpers ───────────────────────────────────────────
@@ -626,8 +698,16 @@ function renderHomeGallery() {
 
   if (homeGalleryMode === 'full') {
     renderFullGrid(allImages, homeGalleryGrid);
-  } else {
+  } else if (homeGalleryMode === 'timeline') {
     renderTimelineGrid(allImages, homeGalleryGrid);
+  } else if (homeGalleryMode === 'favorites') {
+    const favs = allImages.filter((img) => img.favorite);
+    if (favs.length === 0) {
+      homeGalleryEmpty.textContent = 'Chưa có ảnh yêu thích. Nhấn ♡ trên ảnh để đánh dấu.';
+      homeGalleryEmpty.style.display = 'block';
+    } else {
+      renderFullGrid(favs, homeGalleryGrid);
+    }
   }
 }
 
@@ -763,6 +843,9 @@ async function fetchImages() {
 async function refreshGallery() {
   const ok = await fetchImages();
   if (!ok) return;
+  updateHeroBackground();
+  updateHeroStats();
+  renderTodayInMemories();
   renderHomeMemory();
   renderHomeGallery();
   if (currentPage === 'memory') renderMemoryPage();
@@ -804,7 +887,12 @@ function updateMemoryParallax() {
 window.addEventListener('scroll', () => {
   cancelAnimationFrame(parallaxRaf);
   parallaxRaf = requestAnimationFrame(updateMemoryParallax);
+  if (backToTop) backToTop.classList.toggle('is-visible', window.scrollY > 320);
 }, { passive: true });
+
+if (backToTop) {
+  backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
 
 // ── Dark mode toggle ───────────────────────────────────────
 const themeToggle = document.getElementById('themeToggle');
@@ -846,6 +934,8 @@ themeToggle.addEventListener('click', () => {
 
   await Promise.all([loadConfig(), fetchImages()]);
   updateHeroBackground();
+  updateHeroStats();
+  renderTodayInMemories();
   renderHomeMemory();
   renderHomeGallery();
 })();

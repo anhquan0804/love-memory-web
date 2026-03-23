@@ -69,4 +69,17 @@ function deleteImageMeta(filename) {
   writeStore(store);
 }
 
-module.exports = { saveImageMeta, getImageMeta, getAllMeta, deleteImageMeta };
+/**
+ * Merge additional fields into an existing metadata entry.
+ * No-op if the filename is not in the store.
+ * @param {string} filename
+ * @param {object} fields - e.g. { favorite: true } or { caption: 'text' }
+ */
+function updateImageMeta(filename, fields) {
+  const store = readStore();
+  if (!store[filename]) return;
+  Object.assign(store[filename], fields);
+  writeStore(store);
+}
+
+module.exports = { saveImageMeta, getImageMeta, getAllMeta, deleteImageMeta, updateImageMeta };

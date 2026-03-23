@@ -178,7 +178,7 @@ a { color: inherit; text-decoration: none; }
   inset: -30px;
   background: var(--hero-bg, none) center / cover no-repeat;
   filter: blur(28px);
-  opacity: 0.11;
+  opacity: 0.18;
   z-index: 0;
   transition: opacity 0.6s ease;
 }
@@ -201,6 +201,14 @@ a { color: inherit; text-decoration: none; }
   color: var(--color-text-muted);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.hero-stats {
+  margin-top: 12px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  opacity: 0.7;
 }
 
 /* =============================================
@@ -1766,3 +1774,129 @@ a { color: inherit; text-decoration: none; }
 }
 .settings-toggle.is-on { background: var(--color-primary); }
 .settings-toggle.is-on::after { transform: translateX(20px); }
+
+/* =============================================
+   TODAY IN MEMORIES SECTION
+   ============================================= */
+.today-memories-section {
+  border-left: 3px solid var(--color-primary);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 5%, transparent), transparent);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.today-memories-section .section-title::after {
+  content: '';
+  display: inline-block;
+  margin-left: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.6); }
+}
+
+/* =============================================
+   LIGHTBOX DATE
+   ============================================= */
+.lightbox__date {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+/* =============================================
+   FAVORITE BUTTON ON GALLERY ITEMS
+   ============================================= */
+.item-fav-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 2;
+  padding: 0;
+}
+
+.gallery-item:hover .item-fav-btn,
+.item-fav-btn.is-favorite {
+  opacity: 1;
+}
+
+.item-fav-btn.is-favorite {
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.2);
+}
+
+.item-fav-btn:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.item-fav-btn.is-favorite:hover {
+  background: rgba(244, 63, 94, 0.35);
+}
+
+/* Show fav button on mobile (touch) similarly to delete button */
+@media (hover: none) {
+  .item-fav-btn { opacity: 0; }
+  .item-fav-btn.is-favorite { opacity: 1; }
+}
+
+/* =============================================
+   BACK TO TOP BUTTON
+   ============================================= */
+.back-to-top {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-h, 64px) + 16px);
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 600;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.back-to-top:hover { filter: brightness(1.1); }
+
+@media (min-width: 640px) {
+  .back-to-top { bottom: 24px; }
+}
