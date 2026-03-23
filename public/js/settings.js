@@ -51,6 +51,9 @@ const themeGrid            = document.getElementById('themeGrid');
 
 // ── Sheet open / close ─────────────────────────────────────
 function openSettingsSheet() {
+  // Close nav drawer first (desktop)
+  window.closeNav?.();
+
   settingsSheet.style.display        = 'block';
   settingsSheetOverlay.style.display = 'block';
   requestAnimationFrame(() => {
