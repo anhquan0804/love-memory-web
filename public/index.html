@@ -7,12 +7,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>Love Memory</title>
-  <link rel="stylesheet" href="/css/style.css?v=1.2.7" />
+  <link rel="stylesheet" href="/css/style.css?v=1.2.8" />
   <script>
-    // Apply saved theme before paint to avoid flash
+    // Apply saved theme + UI theme before paint to avoid flash
     if (localStorage.getItem('theme') === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
+    const _uit = localStorage.getItem('uiTheme');
+    if (_uit) document.documentElement.setAttribute('data-ui-theme', _uit);
   </script>
 </head>
 <body>
@@ -33,6 +35,7 @@
       <li><a class="nav-link active" data-page="home">Trang chủ</a></li>
       <li><a class="nav-link" data-page="memory">Kỷ niệm</a></li>
       <li><a class="nav-link" data-page="upload">Thêm ảnh</a></li>
+      <li><a class="nav-link" data-action="open-settings">Cài đặt</a></li>
     </ul>
     <button class="theme-toggle" id="themeToggle" aria-label="Chuyển giao diện sáng/tối">
       <span class="theme-toggle__icon" id="themeIcon">
@@ -81,11 +84,9 @@
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       <span>Nhạc</span>
     </a>
-    <a class="bottom-nav__item" id="navItemDisplay" data-action="toggle-theme">
-      <span id="navItemDisplayIcon">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </span>
-      <span id="navItemDisplayLabel">Tối</span>
+    <a class="bottom-nav__item" id="navItemSettings" data-action="open-settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Cài đặt</span>
     </a>
   </nav>
 
@@ -295,8 +296,22 @@
     <button class="network-error__retry" id="networkErrorRetry">Thử lại</button>
   </div>
 
-  <script src="/js/gallery.js?v=1.2.7"></script>
-  <script src="/js/upload.js?v=1.2.7"></script>
-  <script src="/js/music.js?v=1.2.7"></script>
+  <!-- Settings sheet -->
+  <div class="settings-sheet-overlay" id="settingsSheetOverlay"></div>
+  <div class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Cài đặt giao diện">
+    <div class="settings-sheet__handle"></div>
+    <h3 class="settings-sheet__heading">Chọn giao diện</h3>
+    <div class="theme-grid" id="themeGrid"></div>
+    <div class="settings-sheet__divider"></div>
+    <div class="settings-sheet__row">
+      <span class="settings-sheet__label">Chế độ tối</span>
+      <button class="settings-toggle" id="settingsDarkToggle" aria-label="Chuyển chế độ tối/sáng"></button>
+    </div>
+  </div>
+
+  <script src="/js/gallery.js?v=1.2.8"></script>
+  <script src="/js/upload.js?v=1.2.8"></script>
+  <script src="/js/music.js?v=1.2.8"></script>
+  <script src="/js/settings.js?v=1.2.8"></script>
 </body>
 </html>
